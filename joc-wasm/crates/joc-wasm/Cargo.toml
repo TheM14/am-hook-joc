@@ -1,0 +1,13 @@
+[package]
+name = "joc-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Browser (wasm32-unknown-unknown) build of am-hook's JOC renderer"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+joc-core = { path = "../joc-core" }

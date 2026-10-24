@@ -1,0 +1,9 @@
+# Patches and scripts must stay LF on every platform; git apply and bash both
+# treat CRLF as content here.
+*.patch text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
+*.yml text eol=lf
+*.md text eol=lf

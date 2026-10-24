@@ -1,0 +1,28 @@
+name: Upstream monitor
+
+on:
+  schedule:
+    # Every six hours; the job is cheap when there is nothing new.
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: upstream-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    name: Check upstream releases
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate, tag and release new upstream versions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/release_tool.py monitor

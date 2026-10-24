@@ -1,0 +1,17 @@
+{
+  "frames": 24,
+  "frames_with_joc": 9,
+  "frame_bytes": 73728,
+  "bed": {
+    "channels": 6,
+    "tones_hz": [
+      440,
+      554,
+      659,
+      880,
+      110,
+      55
+    ],
+    "amplitude": 0.08
+  }
+}

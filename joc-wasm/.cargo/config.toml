@@ -1,0 +1,8 @@
+# The object-reconstruction kernel keeps its per-frame state in fixed arrays
+# (about 1 MB); the binaural renderer adds another.  A worker thread therefore
+# needs a deeper stack than the 1 MB wasm default.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=-zstack-size=8388608"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = []

@@ -1,0 +1,9 @@
+{
+  "frames": 24,
+  "speaker_frames": 36864,
+  "binaural_programme_frames": 35903,
+  "speaker_sha256": "907b8cca070b5f4e4eb07d63d0a60803eb50e12b13a0012ee62403bef830c13a",
+  "binaural_sha256": "e07706caf58d6f25dc057ecfe6d4ce24b7bd94e27e9f4de409d12fc7fe869e1f",
+  "speaker_peak": 0.3786112070083618,
+  "binaural_peak": 0.16718938946723938
+}

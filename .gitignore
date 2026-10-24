@@ -1,0 +1,27 @@
+# Built artifacts and local-only data. Never commit these.
+target/
+node_modules/
+dist/
+out/
+private/
+# Compiled HRTF fields are build inputs; only the SADIE II set in hrtf/ is kept.
+*.jochrtf
+!hrtf/*.jochrtf
+*.personalized_headphone
+*.sofa
+# Build outputs of the optional reference dump
+*.exe
+*.obj
+*.o
+
+# Test scratch
+*.f32
+!tests/fixtures/*.f32
+*.eac3
+!tests/fixtures/*.eac3
+*.wav
+*.log
+
+# Python bytecode
+__pycache__/
+*.pyc

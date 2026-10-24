@@ -1,0 +1,247 @@
+#!/usr/bin/env python3
+"""Generate the Rust constant tables from the C++ reference sources.
+
+The C++ JOC core keeps several numeric tables in source form: the QMF windows
+and the JOC Huffman trees in ``qmf_tables.h`` / ``joc_huffman_tables.h``, and the
+public binaural filterbank in ``kernel_tables.cpp``.  They are data, not logic,
+so they are converted mechanically here instead of being retyped.
+
+Every value keeps its exact bits: hex floats are parsed with ``float.fromhex``
+and float32 members are rounded through ``struct``; decimal literals parse to the
+nearest double, which is the same value the C++ compiler produced.
+
+Usage:
+    python tools/gen_tables.py --reference <JustOneCacophonyCXX> --out <crate>/src
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import struct
+from pathlib import Path
+
+
+def read(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def array_body(text: str, name: str, path: Path) -> str:
+    """Return the initializer body of ``name`` (``... name[...] = { ... };``)."""
+    # The Huffman tables are declared `int name[][2] = {`, so the dimension part
+    # is matched up to the `=`.
+    pattern = re.compile(r"\b" + re.escape(name) + r"\s*\[[^=]*\]\s*=\s*\{", re.S)
+    match = pattern.search(text)
+    if not match:
+        raise SystemExit(f"{path}: array {name} not found")
+    start = match.end()
+    depth = 1
+    index = start
+    while index < len(text):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:index]
+        index += 1
+    raise SystemExit(f"{path}: unterminated array {name}")
+
+
+def split_values(body: str) -> list[str]:
+    """Split an initializer body into scalar tokens and nested groups."""
+    tokens: list[str] = []
+    depth = 0
+    current = ""
+    for char in body:
+        if char == "{":
+            depth += 1
+            current = ""
+        elif char == "}":
+            depth -= 1
+            if current.strip():
+                tokens.append(current.strip())
+            current = ""
+        elif char == "," and depth == 0:
+            if current.strip():
+                tokens.append(current.strip())
+            current = ""
+        else:
+            current += char
+    if current.strip():
+        tokens.append(current.strip())
+    return tokens
+
+
+def scalar(text: str) -> str:
+    return text.strip()
+
+
+def as_f64(token: str) -> float:
+    token = token.strip()
+    if token.endswith("f"):
+        token = token[:-1]
+    if token.lower().startswith(("0x", "-0x", "+0x")) or "p" in token.lower():
+        return float.fromhex(token)
+    return float(token)
+
+
+def as_f32_bits(token: str) -> int:
+    value = as_f64(token)
+    return struct.unpack("<I", struct.pack("<f", value))[0]
+
+
+def as_f64_bits(token: str) -> int:
+    value = as_f64(token)
+    return struct.unpack("<Q", struct.pack("<d", value))[0]
+
+
+def as_i16(token: str) -> int:
+    return int(token.strip(), 0)
+
+
+def emit_f64(name: str, values: list[float], comment: str) -> str:
+    lines = [f"/// {comment}", f"pub static {name}: [f64; {len(values)}] = ["]
+    for value in values:
+        lines.append(f"    {value!r},")
+    lines.append("];")
+    return "\n".join(lines)
+
+
+def emit_f32_bits(name: str, values: list[int], comment: str) -> str:
+    lines = [f"/// {comment}", f"pub static {name}: [u32; {len(values)}] = ["]
+    for value in values:
+        lines.append(f"    0x{value:08x},")
+    lines.append("];")
+    return "\n".join(lines)
+
+
+def emit_u8(name: str, values: list[int], comment: str) -> str:
+    lines = [f"/// {comment}", f"pub static {name}: [u8; {len(values)}] = ["]
+    for index in range(0, len(values), 16):
+        chunk = ", ".join(str(v) for v in values[index : index + 16])
+        lines.append(f"    {chunk},")
+    lines.append("];")
+    return "\n".join(lines)
+
+
+def emit_i16_pairs(name: str, pairs: list[tuple[int, int]], comment: str) -> str:
+    lines = [f"/// {comment}", f"pub static {name}: [[i16; 2]; {len(pairs)}] = ["]
+    for left, right in pairs:
+        lines.append(f"    [{left}, {right}],")
+    lines.append("];")
+    return "\n".join(lines)
+
+
+def parse_pairs(body: str) -> list[tuple[int, int]]:
+    pairs: list[tuple[int, int]] = []
+    for group in re.findall(r"\{([^{}]*)\}", body):
+        parts = [p.strip() for p in group.split(",") if p.strip()]
+        if len(parts) != 2:
+            raise SystemExit(f"expected a pair, got {group!r}")
+        pairs.append((as_i16(parts[0]), as_i16(parts[1])))
+    return pairs
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--reference", required=True, type=Path)
+    parser.add_argument("--out", required=True, type=Path)
+    args = parser.parse_args()
+
+    reference: Path = args.reference
+    out: Path = args.out
+    out.mkdir(parents=True, exist_ok=True)
+
+    header = (
+        "// Generated by tools/gen_tables.py from the reference C++ sources.\n"
+        "// Do not edit by hand; regenerate instead.\n\n"
+    )
+
+    # ---- QMF windows and parameter-band maps (JOC object reconstruction) ----
+    qmf_path = reference / "src/joc_core/qmf_tables.h"
+    qmf_text = read(qmf_path)
+    parts: list[str] = [header]
+    for name, count in (("kAnalysisWindow", 640), ("kQmf5Window", 640)):
+        values = [as_f64(t) for t in split_values(array_body(qmf_text, name, qmf_path))]
+        if len(values) != count:
+            raise SystemExit(f"{name}: expected {count} values, got {len(values)}")
+        rust = {"kAnalysisWindow": "ANALYSIS_WINDOW", "kQmf5Window": "QMF5_WINDOW"}[name]
+        parts.append(emit_f64(rust, values, f"{name} ({count} doubles)"))
+        parts.append("")
+    for bands in (1, 3, 5, 7, 9, 12, 15, 23):
+        name = f"kPbMap{bands}"
+        values = [int(v) for v in split_values(array_body(qmf_text, name, qmf_path))]
+        if len(values) != 64:
+            raise SystemExit(f"{name}: expected 64 values, got {len(values)}")
+        parts.append(emit_u8(f"PB_MAP_{bands}", values, f"{name} (subband -> parameter band)"))
+        parts.append("")
+    (out / "tables_qmf.rs").write_text("\n".join(parts), encoding="utf-8")
+
+    # ---- JOC Huffman trees ----
+    huff_path = reference / "src/joc_bitstream/joc_huffman_tables.h"
+    huff_text = read(huff_path)
+    parts = [header]
+    trees = (
+        ("joc_huff_code_coarse_generic", "COARSE_GENERIC"),
+        ("joc_huff_code_fine_generic", "FINE_GENERIC"),
+        ("joc_huff_code_coarse_coeff_sparse", "COARSE_COEFF_SPARSE"),
+        ("joc_huff_code_fine_coeff_sparse", "FINE_COEFF_SPARSE"),
+        ("joc_huff_code_5ch_pos_index_sparse", "POS_INDEX_5CH"),
+        ("joc_huff_code_7ch_pos_index_sparse", "POS_INDEX_7CH"),
+    )
+    for source, rust in trees:
+        pairs = parse_pairs(array_body(huff_text, source, huff_path))
+        parts.append(emit_i16_pairs(rust, pairs, f"{source} ({len(pairs)} nodes)"))
+        parts.append("")
+    (out / "tables_huffman.rs").write_text("\n".join(parts), encoding="utf-8")
+
+    # ---- Public binaural filterbank ----
+    kernel_path = reference / "src/hrtf/kernel_tables.cpp"
+    kernel_text = read(kernel_path)
+    parts = [header]
+
+    def f32_array(name: str, count: int) -> list[int]:
+        values = [as_f32_bits(t) for t in split_values(array_body(kernel_text, name, kernel_path))]
+        if len(values) != count:
+            raise SystemExit(f"{name}: expected {count} values, got {len(values)}")
+        return values
+
+    def f64_array(name: str, count: int) -> list[float]:
+        values = [as_f64(t) for t in split_values(array_body(kernel_text, name, kernel_path))]
+        if len(values) != count:
+            raise SystemExit(f"{name}: expected {count} values, got {len(values)}")
+        return values
+
+    parts.append(emit_f32_bits("QMF_ANALYSIS_BITS", f32_array("qmf_analysis_coefficients", 640),
+                               "qmf_analysis_coefficients: float32 bits (64x10)"))
+    parts.append("")
+    parts.append(emit_f32_bits("HYBRID_LOW_BITS", f32_array("hybrid_analysis_low_kernel", 2496),
+                               "hybrid_analysis_low_kernel: float32 bits (3x2x13x16x2)"))
+    parts.append("")
+    parts.append(emit_f32_bits("HYBRID_VALUES_BITS", f32_array("hybrid_synthesis_values", 154),
+                               "hybrid_synthesis_values: float32 bits (154)"))
+    parts.append("")
+    parts.append(emit_f64("QMF_BASIS", f64_array("qmf_synthesis_basis", 32768),
+                          "qmf_synthesis_basis (64x4x128 doubles)"))
+    parts.append("")
+    parts.append(emit_f64("QMF_TAPS", f64_array("qmf_synthesis_taps", 2560),
+                          "qmf_synthesis_taps (64x10x4 doubles)"))
+    parts.append("")
+    indices = [as_i16(t) for t in split_values(array_body(kernel_text, "hybrid_synthesis_indices", kernel_path))]
+    if len(indices) != 616:
+        raise SystemExit(f"hybrid_synthesis_indices: expected 616 values, got {len(indices)}")
+    parts.append("/// hybrid_synthesis_indices (154 x 4 int16)")
+    parts.append(f"pub static HYBRID_INDICES: [i16; {len(indices)}] = [")
+    for index in range(0, len(indices), 16):
+        parts.append("    " + ", ".join(str(v) for v in indices[index:index + 16]) + ",")
+    parts.append("];")
+    parts.append("")
+    (out / "tables_kernels.rs").write_text("\n".join(parts), encoding="utf-8")
+
+    print(f"wrote tables_qmf.rs, tables_huffman.rs, tables_kernels.rs to {out}")
+
+
+if __name__ == "__main__":
+    main()

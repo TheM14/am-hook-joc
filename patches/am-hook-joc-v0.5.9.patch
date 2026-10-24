@@ -1,0 +1,1319 @@
+diff -ruN '--exclude=.DS_Store' a/src/assets.rs b/src/assets.rs
+--- a/src/assets.rs	2026-10-24 17:31:10.370073100 +0800
++++ b/src/assets.rs	2026-10-24 17:31:10.449896600 +0800
+@@ -76,6 +76,32 @@
+     asset!("/assets/ec3-decode-worker.js", JS, "ec3-decode-worker.js"),
+     asset!("/assets/ec3-runtime.mjs", JS, "ec3-runtime.mjs"),
+     asset!("/assets/ec3.wasm", WASM, "ec3.wasm"),
++    // JOC 对象渲染：Worker、WASM（crates/joc-wasm 的编译产物）、
++    // 设置页的 HRTF 检查，以及 SADIE II 数据集编译的 HRTF 场（Apache-2.0）
++    asset!("/assets/joc-decode-worker.js", JS, "joc-decode-worker.js"),
++    asset!("/assets/joc-probe.mjs", JS, "joc-probe.mjs"),
++    asset!("/assets/joc-settings.mjs", JS, "joc-settings.mjs"),
++    asset!("/assets/joc.wasm", WASM, "joc.wasm"),
++    asset!("/assets/joc-hrtf-D1.jochrtf", BIN, "joc-hrtf-D1.jochrtf"),
++    asset!("/assets/joc-hrtf-D2.jochrtf", BIN, "joc-hrtf-D2.jochrtf"),
++    asset!("/assets/joc-hrtf-H3.jochrtf", BIN, "joc-hrtf-H3.jochrtf"),
++    asset!("/assets/joc-hrtf-H4.jochrtf", BIN, "joc-hrtf-H4.jochrtf"),
++    asset!("/assets/joc-hrtf-H5.jochrtf", BIN, "joc-hrtf-H5.jochrtf"),
++    asset!("/assets/joc-hrtf-H6.jochrtf", BIN, "joc-hrtf-H6.jochrtf"),
++    asset!("/assets/joc-hrtf-H7.jochrtf", BIN, "joc-hrtf-H7.jochrtf"),
++    asset!("/assets/joc-hrtf-H8.jochrtf", BIN, "joc-hrtf-H8.jochrtf"),
++    asset!("/assets/joc-hrtf-H9.jochrtf", BIN, "joc-hrtf-H9.jochrtf"),
++    asset!("/assets/joc-hrtf-H10.jochrtf", BIN, "joc-hrtf-H10.jochrtf"),
++    asset!("/assets/joc-hrtf-H11.jochrtf", BIN, "joc-hrtf-H11.jochrtf"),
++    asset!("/assets/joc-hrtf-H12.jochrtf", BIN, "joc-hrtf-H12.jochrtf"),
++    asset!("/assets/joc-hrtf-H13.jochrtf", BIN, "joc-hrtf-H13.jochrtf"),
++    asset!("/assets/joc-hrtf-H14.jochrtf", BIN, "joc-hrtf-H14.jochrtf"),
++    asset!("/assets/joc-hrtf-H15.jochrtf", BIN, "joc-hrtf-H15.jochrtf"),
++    asset!("/assets/joc-hrtf-H16.jochrtf", BIN, "joc-hrtf-H16.jochrtf"),
++    asset!("/assets/joc-hrtf-H17.jochrtf", BIN, "joc-hrtf-H17.jochrtf"),
++    asset!("/assets/joc-hrtf-H18.jochrtf", BIN, "joc-hrtf-H18.jochrtf"),
++    asset!("/assets/joc-hrtf-H19.jochrtf", BIN, "joc-hrtf-H19.jochrtf"),
++    asset!("/assets/joc-hrtf-H20.jochrtf", BIN, "joc-hrtf-H20.jochrtf"),
+     // MV 播放器
+     asset!("/assets/mv/hls.mjs", JS, "mv-hls.mjs"),
+     asset!("/assets/mv/engine.mjs", JS, "mv-engine.mjs"),
+diff -ruN '--exclude=.DS_Store' a/src/ui/app.css b/src/ui/app.css
+--- a/src/ui/app.css	2026-10-24 17:31:10.409514400 +0800
++++ b/src/ui/app.css	2026-10-24 17:31:10.488334500 +0800
+@@ -478,6 +478,8 @@
+ /* 首页底部：说明与 GitHub 链接一行，致谢一行 */
+ .home-footer { flex-direction: column; gap: 10px; padding-top: 20px; border-top: 1px solid var(--line); }
+ .footer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
++.footer-links { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
++.footer-links .footer-github { margin-left: 0; }
+ .footer-github { margin-left: auto; min-height: 32px; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-weight: 600; }
+ .footer-github svg { width: 16px; height: 16px; }
+ .footer-github:hover, .footer-credits a:hover { color: var(--accent); }
+diff -ruN '--exclude=.DS_Store' a/src/ui/i18n.js b/src/ui/i18n.js
+--- a/src/ui/i18n.js	2026-10-24 17:31:10.416652200 +0800
++++ b/src/ui/i18n.js	2026-10-24 17:31:10.496842700 +0800
+@@ -173,6 +173,7 @@
+       'footer.tagline': 'am-hook · 浏览器端解密',
+       'footer.note': '仅供个人学习使用',
+       'footer.github': '在 GitHub 上查看',
++      'footer.patch': '补丁仓库地址',
+       'footer.thanks': '致谢以下开源项目：',
+       'nav.home': '主页',
+       'nav.new': '新发现',
+@@ -492,6 +493,17 @@
+       "set.storefrontDesc": "搜索、新发现与排行榜使用的地区",
+       "set.ampLangDesc": "歌曲、专辑等信息的语言",
+       "set.wrapperDesc": "服务端转发或浏览器直连本地 wrapper-lite",
++      "set.joc": "JOC 对象渲染 (Dolby Atmos)",
++      "set.jocIntro": "用 am-hook 内置的 EC-3 WASM 解码器输出核心 PCM，再在浏览器内解析 E-AC-3 中的 JOC 元数据、重建对象并渲染为立体声。全部计算在 Worker 中完成，不上传任何音频。",
++      "set.jocMode": "播放方式",
++      "set.jocModeDesc": "Speaker 2.0 用等功率声像把对象渲染到两只扬声器；Binaural 用编译好的 HRTF（.jochrtf）做双耳渲染。只影响 E-AC-3 (Dolby Atmos) 曲目。",
++      "set.jocOff": "关闭（浏览器默认）",
++      "set.jocSpeaker": "Speaker 2.0",
++      "set.jocBinaural": "Binaural（HRTF）",
++      "set.jocGain": "输出衰减",
++      "set.jocDataset": "HRTF 数据集","set.jocDatasetDesc": "来自约克大学 SADIE II 数据库的 20 组测量（D1、D2、H3–H20）。可根据自己的头型与耳型挑选最接近的一组，默认 D2：",
++      "set.jocDatasetLink": "SADIE II 数据库（sadie-project）","set.jocGainDesc": "出现削波时播放条会提示，如果发生削波建议至少 -4 dB 以降低对象叠加造成的削波风险",
++      "set.jocHrtfMissing": "没有找到有效的 .jochrtf：双耳模式不可用，Speaker 2.0 不受影响。公开发行版暂不附带 HRTF 资源，选定公开数据集后再补齐。",
+       "set.download": "下载",
+       "set.downloadDesc": "专辑、歌单、单曲与 MV 的下载在浏览器内解密，并写入标签、封面与歌词；进度显示在页面底部的下载中心。",
+       "set.quality": "音质",
+@@ -771,6 +783,11 @@
+       'player.pcmMode': '多声道 PCM',
+       'player.pcmChannels': '{n}.1 PCM',
+       'player.pcmNotice': '正在播放解码后的多声道 PCM；保留 5.1/7.1 声道，但不包含完整的 Atmos 空间音频效果。实际输出取决于设备。',
++      'player.jocSpeaker': 'JOC · 扬声器 2.0',
++      'player.jocBinaural': 'JOC · 双耳',
++      'player.jocNotice': '正在用 JOC 对象渲染（{mode}）：5.1/7.1 核心声道重建 15 个对象与 LFE 后渲染为立体声，输出衰减 {gain} dB。可在设置中心「JOC 对象渲染」中调整。',
++      'player.jocHrtfMissing': '没有找到有效的 HRTF（.jochrtf），双耳渲染不可用，已改用 JOC 扬声器 2.0。',
++      'player.jocClip': 'JOC 渲染的输出超过满刻度（已检测到削波）：出现削波时建议至少 -4 dB 以降低对象叠加造成的削波风险，可在设置中心「JOC 对象渲染」中调整。',
+       'player.flacNotice': '当前浏览器不支持直接播放 ALAC，已在浏览器内无损转码为 FLAC 播放；下载仍保留原始 ALAC。',
+       'player.hintDownload': '可下载解密文件后用本地播放器播放',
+       'player.errorGeneric': '播放出错，请换一个音质，或{hint}。',
+@@ -1071,6 +1088,7 @@
+       'footer.tagline': 'am-hook · in-browser decryption',
+       'footer.note': 'For personal study only',
+       'footer.github': 'View on GitHub',
++      'footer.patch': 'Patch repository',
+       'footer.thanks': 'Thanks to these open-source projects:',
+       'nav.home': 'Home',
+       'nav.new': 'New',
+@@ -1390,6 +1408,17 @@
+       "set.storefrontDesc": "Region for search, New and Top Charts",
+       "set.ampLangDesc": "Language of song, album and artist info",
+       "set.wrapperDesc": "Relayed by the server or a local wrapper-lite reached by the browser",
++      "set.joc": "JOC object rendering (Dolby Atmos)",
++      "set.jocIntro": "The core PCM comes from am-hook's own EC-3 WASM decoder; the JOC metadata in the E-AC-3 stream is then parsed, the objects are rebuilt and rendered to stereo. Everything runs in a Worker and no audio leaves the browser.",
++      "set.jocMode": "Playback mode",
++      "set.jocModeDesc": "Speaker 2.0 pans the objects to two loudspeakers with equal power; Binaural renders them with a compiled HRTF (.jochrtf). Only E-AC-3 (Dolby Atmos) tracks are affected.",
++      "set.jocOff": "Off (browser default)",
++      "set.jocSpeaker": "Speaker 2.0",
++      "set.jocBinaural": "Binaural (HRTF)",
++      "set.jocGain": "Output attenuation",
++      "set.jocDataset": "HRTF dataset","set.jocDatasetDesc": "20 measurement sets from the University of York SADIE II database (D1, D2, H3-H20). Pick the subject closest to your own head and ears; D2 is the default:",
++      "set.jocDatasetLink": "SADIE II database (sadie-project)","set.jocGainDesc": "The player badge reports clipping when it happens; if it does, at least -4 dB is recommended to reduce the clipping risk from summed objects",
++      "set.jocHrtfMissing": "No valid .jochrtf was found: binaural mode is unavailable and Speaker 2.0 is unaffected. Public builds ship no HRTF asset until a public dataset is chosen.",
+       "set.download": "Downloads",
+       "set.downloadDesc": "Albums, playlists, songs and music videos are decrypted in the browser and tagged with metadata, cover art and lyrics; progress shows in the download center at the bottom of the page.",
+       "set.quality": "Quality",
+@@ -1669,6 +1698,11 @@
+       'player.pcmMode': 'Multichannel PCM',
+       'player.pcmChannels': '{n}.1 PCM',
+       'player.pcmNotice': 'Playing decoded multichannel PCM. 5.1/7.1 channels are retained, but the full Atmos spatial experience is unavailable. Output depends on your device.',
++      'player.jocSpeaker': 'JOC · Speaker 2.0',
++      'player.jocBinaural': 'JOC · Binaural',
++      'player.jocNotice': 'Rendering JOC objects ({mode}): the 5.1/7.1 core bed is used to rebuild 15 objects plus LFE and rendered to stereo, with {gain} dB of output attenuation. Adjust it under Settings → JOC object rendering.',
++      'player.jocHrtfMissing': 'No valid HRTF (.jochrtf) was found, so binaural rendering is unavailable; JOC Speaker 2.0 is used instead.',
++      'player.jocClip': 'JOC output is above full scale (clipping detected). If clipping occurs, at least -4 dB is recommended to reduce the clipping risk from summed objects; adjust it under Settings → JOC object rendering.',
+       'player.flacNotice': 'This browser cannot play ALAC directly, so it is being converted losslessly to FLAC for playback. Downloads retain the original ALAC.',
+       'player.hintDownload': 'download the decrypted file and play it locally',
+       'player.errorGeneric': 'Playback failed. Try another quality, or {hint}.',
+diff -ruN '--exclude=.DS_Store' a/src/ui/joc-decode-worker.js b/src/ui/joc-decode-worker.js
+--- a/src/ui/joc-decode-worker.js	1970-01-01 08:00:00.000000000 +0800
++++ b/src/ui/joc-decode-worker.js	2026-10-24 17:31:10.497846100 +0800
+@@ -0,0 +1,374 @@
++// E-AC-3 JOC decode + render worker. One thread does everything: the EC-3
++// decoder (am-hook's ec3.wasm) produces the core PCM, the JOC module
++// (joc.wasm, built from joc-wasm/) reconstructs the objects and renders them.
++//
++// The main thread sends one fMP4 fragment at a time and receives one interleaved
++// stereo buffer, which it schedules on Web Audio. Decoder and renderer state stay
++// in this worker, so a seek is a reset plus a pre-roll, exactly like the C++
++// streaming API.
++import createEc3 from '/assets/ec3-runtime.mjs';
++
++let modulePromise = null;
++let ec3 = null;
++let ctx = 0;
++let joc = null;
++let handle = 0;
++let rate = 48000;
++let pendingSkip = 0;
++let outPtr = 0;
++let pcmPtr = 0;
++let pcmCapacity = 0;
++let mode = 0;
++const HRTF_URLS = {
++  D1: '/assets/joc-hrtf-D1.jochrtf',
++  D2: '/assets/joc-hrtf-D2.jochrtf',
++  H3: '/assets/joc-hrtf-H3.jochrtf',
++  H4: '/assets/joc-hrtf-H4.jochrtf',
++  H5: '/assets/joc-hrtf-H5.jochrtf',
++  H6: '/assets/joc-hrtf-H6.jochrtf',
++  H7: '/assets/joc-hrtf-H7.jochrtf',
++  H8: '/assets/joc-hrtf-H8.jochrtf',
++  H9: '/assets/joc-hrtf-H9.jochrtf',
++  H10: '/assets/joc-hrtf-H10.jochrtf',
++  H11: '/assets/joc-hrtf-H11.jochrtf',
++  H12: '/assets/joc-hrtf-H12.jochrtf',
++  H13: '/assets/joc-hrtf-H13.jochrtf',
++  H14: '/assets/joc-hrtf-H14.jochrtf',
++  H15: '/assets/joc-hrtf-H15.jochrtf',
++  H16: '/assets/joc-hrtf-H16.jochrtf',
++  H17: '/assets/joc-hrtf-H17.jochrtf',
++  H18: '/assets/joc-hrtf-H18.jochrtf',
++  H19: '/assets/joc-hrtf-H19.jochrtf',
++  H20: '/assets/joc-hrtf-H20.jochrtf',
++};
++let dataset = 'D2';
++let gainDb = 0;
++
++function boxes(bytes, start = 0, end = bytes.length) {
++  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
++  const out = [];
++  for (let p = start; p + 8 <= end;) {
++    let size = view.getUint32(p);
++    const type = String.fromCharCode(...bytes.subarray(p + 4, p + 8));
++    let header = 8;
++    if (size === 1) { size = Number(view.getBigUint64(p + 8)); header = 16; }
++    else if (size === 0) size = end - p;
++    if (size < header || p + size > end) throw new Error(`Invalid MP4 ${type} box`);
++    out.push({ type, start: p, body: p + header, end: p + size });
++    p += size;
++  }
++  return out;
++}
++
++function child(bytes, parent, type) {
++  const box = boxes(bytes, parent.body, parent.end).find((entry) => entry.type === type);
++  if (!box) throw new Error(`Missing MP4 ${type} box`);
++  return box;
++}
++
++function top(bytes, type) { return child(bytes, { body: 0, end: bytes.length }, type); }
++
++function samplesFromFragment(bytes) {
++  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
++  const moof = top(bytes, 'moof');
++  const traf = child(bytes, moof, 'traf');
++  const tfhd = child(bytes, traf, 'tfhd');
++  const flags = view.getUint32(tfhd.body) & 0xffffff;
++  let cursor = tfhd.body + 8;
++  if (flags & 0x01) cursor += 8;
++  if (flags & 0x02) cursor += 4;
++  const defaultSize = flags & 0x10 ? view.getUint32(cursor + (flags & 0x08 ? 4 : 0)) : 0;
++  const samples = [];
++  let nextData = top(bytes, 'mdat').body;
++  for (const trun of boxes(bytes, traf.body, traf.end).filter((box) => box.type === 'trun')) {
++    const runFlags = view.getUint32(trun.body) & 0xffffff;
++    const count = view.getUint32(trun.body + 4);
++    if (count > 100000) throw new Error('Too many EC-3 samples');
++    let pos = trun.body + 8;
++    let data = nextData;
++    if (runFlags & 0x01) { data = moof.start + view.getInt32(pos); pos += 4; }
++    if (runFlags & 0x04) pos += 4;
++    for (let i = 0; i < count; i++) {
++      if (runFlags & 0x100) pos += 4;
++      const size = runFlags & 0x200 ? view.getUint32(pos) : defaultSize;
++      if (runFlags & 0x200) pos += 4;
++      if (runFlags & 0x400) pos += 4;
++      if (runFlags & 0x800) pos += 4;
++      if (!size || pos > trun.end || data < 0 || data + size > bytes.length) throw new Error('Invalid EC-3 sample range');
++      samples.push(bytes.subarray(data, data + size));
++      data += size;
++    }
++    nextData = data;
++  }
++  if (!samples.length) throw new Error('No EC-3 samples in fragment');
++  return samples;
++}
++
++function jocError() {
++  const ptr = joc.exports.joc_error_ptr();
++  const len = joc.exports.joc_error_len();
++  const text = new TextDecoder().decode(new Uint8Array(joc.exports.memory.buffer, ptr, len));
++  return text || 'JOC renderer error';
++}
++
++async function ensureEc3() {
++  if (!ec3) {
++    if (!modulePromise) {
++      modulePromise = fetch('/assets/ec3.wasm').then(async (response) => {
++        if (!response.ok) throw new Error(`EC-3 WASM HTTP ${response.status}`);
++        const wasmBinary = new Uint8Array(await response.arrayBuffer());
++        return createEc3({ wasmBinary });
++      });
++    }
++    const module = await modulePromise;
++    const wrap = (name, args) => module.cwrap(name, 'number', args);
++    ec3 = {
++      module,
++      open: wrap('init_decoder', ['number']),
++      packet: wrap('configure_decode_packet', ['number', 'number']),
++      decode: wrap('decode_packet', ['number', 'bigint']),
++      format: wrap('get_decoded_format', ['number']),
++      plane: wrap('get_decoded_plane_ptr', ['number', 'number']),
++      channels: wrap('get_decoded_channels', ['number']),
++      rate: wrap('get_decoded_sample_rate', ['number']),
++      count: wrap('get_decoded_sample_count', ['number']),
++      flush: wrap('flush_decoder', ['number']),
++      close: wrap('close_decoder', ['number']),
++    };
++  }
++  if (!ctx) {
++    ctx = ec3.open(1); // 1 = E-AC-3
++    if (!ctx) throw new Error('Cannot open the EC-3 decoder');
++  }
++  return ec3;
++}
++
++async function ensureJoc() {
++  if (!joc) {
++    const response = await fetch('/assets/joc.wasm');
++    if (!response.ok) throw new Error(`JOC WASM HTTP ${response.status}`);
++    const bytes = await response.arrayBuffer();
++    // A buffer source resolves to { module, instance }.
++    const { instance } = await WebAssembly.instantiate(bytes, {});
++    joc = instance;
++    const capacity = 16 * 1536;
++    pcmPtr = joc.exports.joc_alloc(capacity * 4);
++    pcmCapacity = capacity;
++    outPtr = joc.exports.joc_alloc(8192 * 4);
++  }
++  return joc;
++}
++
++function allocBytes(length) {
++  const ptr = joc.exports.joc_alloc(length);
++  if (!ptr) throw new Error('JOC WASM allocation failed');
++  return ptr;
++}
++
++async function openStream(options) {
++  await ensureEc3();
++  await ensureJoc();
++  if (handle) { joc.exports.joc_close(handle); handle = 0; }
++  mode = options.mode === 'binaural' ? 1 : 0;
++  gainDb = Number(options.gainDb) || 0;
++  dataset = String(options.dataset || 'D2').replace(/[^A-Za-z0-9]/g, '') || 'D2';
++  let hrtfPtr = 0;
++  let hrtfLength = 0;
++  let hrtfError = '';
++  if (mode === 1) {
++    try {
++      const response = await fetch(HRTF_URLS[dataset] || HRTF_URLS.D2);
++      if (!response.ok) throw new Error(`HTTP ${response.status}`);
++      const bytes = new Uint8Array(await response.arrayBuffer());
++      hrtfPtr = allocBytes(bytes.length);
++      new Uint8Array(joc.exports.memory.buffer, hrtfPtr, bytes.length).set(bytes);
++      hrtfLength = bytes.length;
++    } catch (error) {
++      hrtfError = error.message || String(error);
++    }
++  }
++  handle = joc.exports.joc_open(
++    mode, gainDb, 1 /* mid */, 1473, 5.0, hrtfPtr, hrtfLength,
++  );
++  if (hrtfPtr) joc.exports.joc_free(hrtfPtr, hrtfLength);
++  if (!handle) {
++    const message = jocError();
++    if (mode === 1) throw new Error(`Binaural HRTF unavailable: ${hrtfError || message}`);
++    throw new Error(message);
++  }
++  pendingSkip = 0;
++  return { hrtf: mode === 0 ? true : !hrtfError, hrtfError };
++}
++
++function restartDecoder() {
++  if (!ec3) return;
++  if (ctx) { ec3.close(ctx); ctx = 0; }
++  // A seek restarts the core decoder as well: its overlap state belongs to the
++  // old position, and the pre-roll frames rebuild it.
++  ctx = ec3.open(1);
++  if (!ctx) throw new Error('Cannot reopen the EC-3 decoder');
++}
++
++function pullFrames() {
++  const chunks = [];
++  let total = 0;
++  for (;;) {
++    const produced = joc.exports.joc_pull(handle, outPtr, 4096);
++    if (produced < 0) throw new Error(jocError());
++    if (produced === 0) break;
++    const view = new Float32Array(joc.exports.memory.buffer, outPtr, produced * 2);
++    chunks.push(view.slice());
++    total += produced;
++  }
++  return { chunks, total };
++}
++
++function decodeFragment(buffer) {
++  const started = performance.now();
++  const packets = samplesFromFragment(new Uint8Array(buffer));
++  const chunks = [];
++  let skipped = 0;
++  for (const packet of packets) {
++    const ptr = ec3.packet(ctx, packet.length);
++    if (!ptr) throw new Error('EC-3 packet allocation failed');
++    ec3.module.HEAPU8.set(packet, ptr);
++    const result = ec3.decode(ctx, 0n);
++    if (result < 0) throw new Error(`EC-3 decode failed (${result})`);
++    if (ec3.format(ctx) !== 8) throw new Error('EC-3 decoder returned non-planar float PCM');
++    const n = ec3.count(ctx);
++    const ch = ec3.channels(ctx);
++    const hz = ec3.rate(ctx);
++    if (ch !== 6 && ch !== 8) throw new Error(`Unsupported EC-3 channel count ${ch}`);
++    if (!rate) rate = hz;
++    if (hz !== rate) throw new Error('EC-3 sample rate changed mid-stream');
++    if (n > pcmCapacity / ch) throw new Error('EC-3 frame is too large');
++
++    const samples = new Float32Array(joc.exports.memory.buffer, pcmPtr, n * ch);
++    for (let c = 0; c < ch; c++) {
++      const plane = ec3.plane(ctx, c);
++      if (!plane) throw new Error('Missing EC-3 PCM plane');
++      const source = new Float32Array(ec3.module.HEAPU8.buffer, plane, n);
++      for (let s = 0; s < n; s++) samples[s * ch + c] = source[s];
++    }
++
++    const eac3Ptr = allocBytes(packet.length);
++    new Uint8Array(joc.exports.memory.buffer, eac3Ptr, packet.length).set(packet);
++    if (joc.exports.joc_push_eac3(handle, eac3Ptr, packet.length) !== 0) throw new Error(jocError());
++    joc.exports.joc_free(eac3Ptr, packet.length);
++
++    if (joc.exports.joc_push_pcm(handle, pcmPtr, n, ch) !== 0) throw new Error(jocError());
++    // The fragment boundary is a frame boundary: render the last grouped frame.
++    if (joc.exports.joc_flush_pending(handle) !== 0) throw new Error(jocError());
++    const pulled = pullFrames();
++    for (const chunk of pulled.chunks) chunks.push(chunk);
++  }
++
++  const totalFrames = chunks.reduce((sum, chunk) => sum + chunk.length / 2, 0);
++  if (pendingSkip > 0) {
++    skipped = Math.min(pendingSkip, totalFrames);
++    pendingSkip -= skipped;
++  }
++  const frames = new Float32Array((totalFrames - skipped) * 2);
++  let at = 0;
++  let drop = skipped * 2;
++  for (const chunk of chunks) {
++    let view = chunk;
++    if (drop > 0) {
++      if (drop >= view.length) { drop -= view.length; continue; }
++      view = view.subarray(drop);
++      drop = 0;
++    }
++    frames.set(view, at);
++    at += view.length;
++  }
++  const info = status();
++  return {
++    rate,
++    samples: totalFrames - skipped,
++    skipped,
++    frames,
++    // Diagnostics for the player: clipping and non-finite samples are reported,
++    // never silently clamped.
++    status: info,
++    ms: performance.now() - started,
++    memoryBytes: joc.exports.memory.buffer.byteLength + (ec3.module.HEAPU8.buffer.byteLength || 0),
++  };
++}
++
++function status() {
++  const ptr = joc.exports.joc_alloc(128);
++  joc.exports.joc_status(handle, ptr);
++  const view = new DataView(joc.exports.memory.buffer, ptr, 128);
++  const result = {
++    peak: view.getFloat64(56, true),
++    overUnity: Number(view.getBigUint64(64, true)),
++    nonFinite: Number(view.getBigUint64(72, true)),
++    missingJoc: view.getUint32(36, true),
++    framesIn: Number(view.getBigUint64(0, true)),
++  };
++  joc.exports.joc_free(ptr, 128);
++  return result;
++}
++
++self.onmessage = async ({ data }) => {
++  try {
++    switch (data.op) {
++      case 'open': {
++        const result = await openStream(data);
++        self.postMessage({ id: data.id, ok: true, result });
++        return;
++      }
++      case 'decode': {
++        const result = decodeFragment(data.buf);
++        self.postMessage({ id: data.id, ok: true, result }, [result.frames.buffer]);
++        return;
++      }
++      case 'reset': {
++        if (!handle) throw new Error('JOC stream is not open');
++        if (joc.exports.joc_reset(handle) !== 0) throw new Error(jocError());
++        restartDecoder();
++        pendingSkip = Math.max(0, Number(data.skipFrames) || 0);
++        self.postMessage({ id: data.id, ok: true });
++        return;
++      }
++      case 'gain': {
++        if (handle && joc.exports.joc_set_gain(handle, Number(data.gainDb) || 0) !== 0) {
++          throw new Error(jocError());
++        }
++        self.postMessage({ id: data.id, ok: true });
++        return;
++      }
++      case 'status': {
++        self.postMessage({ id: data.id, ok: true, result: handle ? status() : null });
++        return;
++      }
++      case 'finish': {
++        // End of input: drain the renderer. The first frames complete the
++        // programme (the binaural kernel holds 961 samples back), the rest is the
++        // room tail, which the player drops.
++        if (!handle) {
++          self.postMessage({ id: data.id, ok: true, result: { frames: new Float32Array(0), samples: 0, tailFrames: 0 } });
++          return;
++        }
++        if (joc.exports.joc_flush(handle) !== 0) throw new Error(jocError());
++        const pulled = pullFrames();
++        let text = new Float32Array(pulled.total * 2);
++        let at = 0;
++        for (const chunk of pulled.chunks) { text.set(chunk, at); at += chunk.length; }
++        pendingSkip = 0;
++        self.postMessage({ id: data.id, ok: true, result: { frames: text, samples: pulled.total, tailFrames: pulled.total } }, [text.buffer]);
++        return;
++      }
++      case 'close': {
++        if (handle) { joc.exports.joc_close(handle); handle = 0; }
++        restartDecoder();
++        self.postMessage({ id: data.id, ok: true });
++        return;
++      }
++      default:
++        throw new Error(`Unknown JOC worker operation ${data.op}`);
++    }
++  } catch (error) {
++    self.postMessage({ id: data.id, ok: false, error: error.message || String(error) });
++  }
++};
+diff -ruN '--exclude=.DS_Store' a/src/ui/joc-probe.mjs b/src/ui/joc-probe.mjs
+--- a/src/ui/joc-probe.mjs	1970-01-01 08:00:00.000000000 +0800
++++ b/src/ui/joc-probe.mjs	2026-10-24 17:31:10.497846100 +0800
+@@ -0,0 +1,30 @@
++// Probes the bundled HRTF without touching playback: opens a JOC stream in
++// binaural mode inside the real worker, reports success or the loader's error,
++// and closes it again. Settings uses this to state whether binaural is possible.
++
++export function probeHrtf(signal) {
++  return new Promise((resolve) => {
++    let worker;
++    let timer;
++    const done = (result) => {
++      clearTimeout(timer);
++      if (worker) worker.terminate();
++      resolve(result);
++    };
++    try {
++      worker = new Worker('/assets/joc-decode-worker.js', { type: 'module' });
++    } catch (error) {
++      resolve({ ok: false, error: String(error) });
++      return;
++    }
++    timer = setTimeout(() => done({ ok: false, error: 'timeout' }), 20000);
++    worker.onmessage = ({ data }) => {
++      if (data.id !== 1) return;
++      if (data.ok) done({ ok: true, result: data.result });
++      else done({ ok: false, error: data.error });
++    };
++    worker.onerror = (event) => done({ ok: false, error: event.message || 'worker error' });
++    signal?.addEventListener('abort', () => done({ ok: false, error: 'aborted' }), { once: true });
++    worker.postMessage({ id: 1, op: 'open', mode: 'binaural', gainDb: -4 });
++  });
++}
+diff -ruN '--exclude=.DS_Store' a/src/ui/joc-settings.mjs b/src/ui/joc-settings.mjs
+--- a/src/ui/joc-settings.mjs	1970-01-01 08:00:00.000000000 +0800
++++ b/src/ui/joc-settings.mjs	2026-10-24 17:31:10.497846100 +0800
+@@ -0,0 +1,125 @@
++// Settings section for the optional JOC object renderer (E-AC-3 Dolby Atmos).
++//
++// Two output modes and an output attenuation with the recommended floor.
++import { OPTIONS, prefs } from './prefs.mjs';
++import { probeHrtf } from './joc-probe.mjs';
++
++const { AmI18n } = window;
++
++function el(tag, props = {}, ...children) {
++  const node = Object.assign(document.createElement(tag), props);
++  node.append(...children.filter((child) => child !== null && child !== undefined && child !== false));
++  return node;
++}
++
++export function mountJocSettings(root, signal) {
++  const host = root.querySelector('#joc');
++  if (!host) return;
++  // Keep the sticky section bar from covering the heading when the TOC jumps here.
++  host.style.scrollMarginTop = '60px';
++  const get = () => prefs.get('joc');
++  const set = (patch) => prefs.set('joc', patch);
++  let hrtf = null; // gates the Binaural option; null while probing
++  let disposed = false;
++
++  function row(label, desc, control) {
++    return el('div', { className: 'set-row' },
++      el('span', { className: 'set-label' },
++        el('span', { textContent: label }),
++        desc ? el('span', { className: 'set-desc', textContent: desc }) : null),
++      el('div', { className: 'set-control' }, control));
++  }
++
++  function render() {
++    if (disposed) return;
++    const value = get();
++    const t = AmI18n.t;
++    const title = el('h2', { className: 'set-group-title', textContent: t('set.joc') });
++    // Keep the requested capitalisation instead of the global uppercase style.
++    title.style.textTransform = 'none';
++    const group = el('section', { className: 'set-group' },
++      title,
++      el('p', { className: 'set-desc', textContent: t('set.jocIntro') }));
++
++    // Mode: off / Speaker 2.0 / Binaural
++    const modeGroup = el('div', { className: 'set-segmented', role: 'radiogroup' });
++    modeGroup.setAttribute('aria-label', t('set.jocMode'));
++    const options = [
++      ['off', t('set.jocOff'), false],
++      ['speaker', t('set.jocSpeaker'), false],
++      ['binaural', t('set.jocBinaural'), hrtf !== null && !hrtf.ok],
++    ];
++    for (const [mode, label, disabled] of options) {
++      const button = el('button', {
++        type: 'button',
++        className: 'set-segment',
++        textContent: label,
++        disabled,
++      });
++      button.setAttribute('role', 'radio');
++      button.setAttribute('aria-checked', String(value.mode === mode));
++      if (disabled) button.title = t('set.jocHrtfMissing');
++      button.addEventListener('click', () => set({ mode }));
++      modeGroup.append(button);
++    }
++
++    // Attenuation in dB, with the recommended floor.
++    const gain = el('input', {
++      type: 'number',
++      className: 'set-input set-number',
++      min: -60,
++      max: 0,
++      step: 1,
++      value: String(value.gain),
++    });
++    gain.setAttribute('aria-label', t('set.jocGain'));
++    gain.addEventListener('change', () => {
++      const number = Math.round(Number(gain.value));
++      if (!Number.isFinite(number)) { gain.value = String(get().gain); return; }
++      set({ gain: Math.min(0, Math.max(-60, number)) });
++    });
++    const gainRow = row(
++      t('set.jocGain'),
++      t('set.jocGainDesc'),
++      el('div', { className: 'set-control' }, gain, el('span', { className: 'set-desc', textContent: 'dB' })),
++    );
++
++    // HRTF dataset (SADIE II subjects), picked from the precompiled fields.
++    const dataset = el('select', { className: 'set-select' });
++    for (const name of OPTIONS.joc.dataset) {
++      dataset.append(el('option', { value: name, textContent: name }));
++    }
++    dataset.value = value.dataset;
++    dataset.setAttribute('aria-label', t('set.jocDataset'));
++    dataset.addEventListener('change', () => set({ dataset: dataset.value }));
++    const datasetDesc = el('span', { className: 'set-desc' },
++      document.createTextNode(t('set.jocDatasetDesc') + ' '),
++      el('a', {
++        href: 'https://www.york.ac.uk/sadie-project/database.html',
++        target: '_blank',
++        rel: 'noopener noreferrer',
++        textContent: t('set.jocDatasetLink'),
++      }));
++    const datasetRow = el('div', { className: 'set-row' },
++      el('span', { className: 'set-label' },
++        el('span', { textContent: t('set.jocDataset') }), datasetDesc),
++      el('div', { className: 'set-control' }, dataset));
++
++    group.append(el('div', { className: 'set-card' },
++      row(t('set.jocMode'), t('set.jocModeDesc'), modeGroup),
++      gainRow,
++      datasetRow));
++    host.replaceChildren(group);
++  }
++
++  render();
++  probeHrtf(signal).then((result) => {
++    if (disposed) return;
++    hrtf = result;
++    render();
++  });
++
++  const offPrefs = prefs.onChange((section) => { if (section === 'joc') render(); });
++  const offLang = AmI18n.onChange(render);
++  signal.addEventListener('abort', () => { disposed = true; offPrefs(); offLang(); }, { once: true });
++}
+diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
+--- a/src/ui/player.js	2026-10-24 17:31:10.421569400 +0800
++++ b/src/ui/player.js	2026-10-24 17:31:10.502847200 +0800
+@@ -55,14 +55,43 @@
+    * 该编码在当前浏览器中可尝试的播放方式（按优先级），空数组表示不支持。
+    * 全部由浏览器端解密；EC-3 按 MSE -> PCM 检测，ALAC 可回退为 FLAC。
+    */
++  /** JOC 设置（设置中心写入 prefs.mjs 的 'joc' 分组）；prefs.mjs 还没有加载时按关闭处理 */
++  function jocSettings() {
++    try {
++      if (global.AmPrefs) {
++        const value = global.AmPrefs.get('joc');
++        return { mode: value.mode, gain: Number(value.gain), dataset: value.dataset };
++      }
++      const raw = JSON.parse(localStorage.getItem('am-hook:settings') || '{}');
++      const value = raw && raw.joc ? raw.joc : {};
++      const mode = value.mode === 'speaker' || value.mode === 'binaural' ? value.mode : 'off';
++      const gain = Number.isFinite(value.gain) ? Math.min(0, Math.max(-60, value.gain)) : 0;
++      const dataset = /^[A-Z][0-9]+$/.test(String(value.dataset)) ? value.dataset : 'D2';
++      return { mode, gain, dataset };
++    } catch {
++      return { mode: 'off', gain: 0, dataset: 'D2' };
++    }
++  }
++
++  /** 需要自己调度 PCM 的播放方式（JOC 与内置 EC-3 解码） */
++  function isPcmMode(mode) { return mode === 'ec3' || mode === 'joc2' || mode === 'jocbin'; }
++
+   function detectModes(codecs) {
+     if (failedCodecs.has(codecs)) return [];
+     const mime = mimeFor(codecs);
+     const modes = [];
+     const decrypt = global.AmDecrypt && global.AmDecrypt.supported();
+     const MS = global.ManagedMediaSource || global.MediaSource;
++    const ec3 = /^(ec-3|ec3)$/i.test(String(codecs));
++    const joc = ec3 ? jocSettings() : { mode: 'off' };
++    // JOC 对象渲染优先（双耳 -> Speaker 2.0），其后才是 MSE 与内置 EC-3 PCM
++    if (ec3 && joc.mode !== 'off' && decrypt && global.Worker && global.WebAssembly &&
++        (global.AudioContext || global.webkitAudioContext)) {
++      if (joc.mode === 'binaural') modes.push('jocbin');
++      modes.push('joc2');
++    }
+     if (MS && MS.isTypeSupported && MS.isTypeSupported(mime) && decrypt) modes.push('mse');
+-    if (/^(ec-3|ec3)$/i.test(String(codecs))) {
++    if (ec3) {
+       if (decrypt && global.Worker && global.WebAssembly &&
+           (global.AudioContext || global.webkitAudioContext)) modes.push('ec3');
+       return modes;
+@@ -87,13 +116,20 @@
+   }
+ 
+   function modeLabel(mode) {
+-    return mode === 'ec3' ? t('player.pcmMode') : mode.toUpperCase();
++    if (mode === 'ec3') return t('player.pcmMode');
++    if (mode === 'joc2') return t('player.jocSpeaker');
++    if (mode === 'jocbin') return t('player.jocBinaural');
++    return mode.toUpperCase();
+   }
+ 
+   /* ---------- 播放队列的曲目：逐首解析 master，选浏览器能播放的最高音质 ---------- */
+   function rankVariant(v) {
+     const g = v.group_id.toLowerCase();
+-    return g.includes('alac') ? 0 : g.includes('atmos') ? 1 : g.includes('he-') ? 3 : 2;
++    // JOC 模式下队列优先全景声（否则 24-bit ALAC 总是排在前面，JOC 只会在手动选择音质时用到）
++    const joc = jocSettings().mode !== 'off';
++    if (g.includes('alac')) return joc ? 1 : 0;
++    if (g.includes('atmos')) return joc ? 0 : 1;
++    return g.includes('he-') ? 3 : 2;
+   }
+ 
+   function variantLabel(v) {
+@@ -476,6 +512,36 @@
+           this.onUpdate();
+           if (required) break;
+         }
++        if (this.nextIndex >= segments.length && !this.finished && this.decoder) {
++          this.finished = true;
++          const tail = await this.decoder.finish();
++          if (gen !== this.generation) return;
++          if (tail && tail.samples > 0 && this.cursor !== null) {
++            // Only the part that belongs to the track is played; the room tail goes on
++            // past the duration and the player ends at the duration.
++            const remaining = this.duration ? Math.max(0, this.duration - this.cursor) : 0;
++            const frames = Math.min(tail.samples, Math.round(remaining * this.rate));
++            if (frames > 0) {
++              const buffer = this.context.createBuffer(2, frames, this.rate);
++              const left = buffer.getChannelData(0);
++              const right = buffer.getChannelData(1);
++              const source = tail.frames;
++              for (let i = 0; i < frames; i++) {
++                left[i] = source[i * 2];
++                right[i] = source[i * 2 + 1];
++              }
++              const node = this.context.createBufferSource();
++              node.buffer = buffer;
++              node.connect(this.envelope);
++              node.onended = () => { this.nodes.delete(node); node.disconnect(); };
++              this.nodes.add(node);
++              node.start(Math.max(this.context.currentTime + 0.01,
++                this.anchorContextTime + this.cursor - this.anchorTime));
++              this.cursor += frames / this.rate;
++              this.loadedUntil = Math.max(this.loadedUntil, this.cursor);
++            }
++          }
++        }
+       } catch (error) {
+         if (required && gen === this.generation) throw error;
+         if (error.name !== 'AbortError' && gen === this.generation) {
+@@ -515,8 +581,17 @@
+       this.resumeAfterSeek = !this.paused || (this.seeking && this.resumeAfterSeek);
+       this.seeking = true;
+       this.paused = true;
+-      for (const node of this.nodes) { try { node.stop(); } catch {} node.disconnect(); }
++      const now = this.context.currentTime;
++      try {
++        this.envelope.gain.cancelScheduledValues(now);
++        this.envelope.gain.setValueAtTime(this.envelope.gain.value, now);
++        this.envelope.gain.linearRampToValueAtTime(0, now + 0.008);
++      } catch {}
++      for (const node of this.nodes) {
++        try { node.stop(now + 0.012); } catch { try { node.stop(); } catch {} }
++      }
+       this.nodes.clear();
++      this.fadeAfterSeek = true;
+       this.anchorTime = Math.max(0, Math.min(time, this.duration));
+       this.anchorContextTime = this.context.currentTime + 0.03;
+       this.loadedUntil = this.anchorTime;
+@@ -560,6 +635,290 @@
+   }
+ 
+   /**
++   * JOC 播放的方式：EC-3 解码、对象重建与渲染都在 Worker（joc-decode-worker.js）里完成，
++   * 主线程只把渲染好的立体声排进 Web Audio。两种输出（Speaker 2.0 / Binaural）只有 Worker 的
++   * 模式不同，时间轴、缓冲与 Seek 逻辑相同。
++   */
++  class JocDecoder {
++    constructor() {
++      this.worker = new Worker('/assets/joc-decode-worker.js', { type: 'module' });
++      this.pending = new Map();
++      this.seq = 0;
++      this.worker.onmessage = ({ data }) => {
++        const job = this.pending.get(data.id);
++        if (!job) return;
++        this.pending.delete(data.id);
++        if (data.ok) job.resolve(data.result);
++        else job.reject(new Error(data.error));
++      };
++      this.worker.onerror = (event) => {
++        for (const job of this.pending.values()) job.reject(new Error(event.message || 'JOC Worker failed'));
++        this.pending.clear();
++      };
++    }
++
++    request(op, payload = {}, transfer = []) {
++      const id = ++this.seq;
++      return new Promise((resolve, reject) => {
++        this.pending.set(id, { resolve, reject });
++        this.worker.postMessage({ id, op, ...payload }, transfer);
++      });
++    }
++
++    open(options) { return this.request('open', options); }
++    /** End of input: returns the frames the renderer still holds (programme end + room tail). */
++    finish() { return this.request('finish'); }
++    decode(buf) { return this.request('decode', { buf }, [buf]); }
++    reset(skipFrames) { return this.request('reset', { skipFrames }); }
++    setGain(gainDb) { return this.request('gain', { gainDb }); }
++    finish() { return this.request('finish'); }
++
++    destroy() {
++      try { this.worker.postMessage({ id: ++this.seq, op: 'close' }); } catch {}
++      this.worker.terminate();
++      for (const job of this.pending.values()) job.reject(new DOMException('stale', 'AbortError'));
++      this.pending.clear();
++    }
++  }
++
++  class JocEngine {
++    constructor(onUpdate, onError, onEnded, settings = {}) {
++      this.onUpdate = onUpdate;
++      this.onError = onError;
++      this.onEnded = onEnded;
++      this.onClip = settings.onClip || null;
++      this.overUnity = 0;
++      this.nonFinite = 0;
++      this.peak = 0;
++      this.decodedMs = 0;
++      this.decodedAudio = 0;
++      this.mode = settings.mode === 'binaural' ? 'binaural' : 'speaker';
++      this.gainDb = Number(settings.gainDb) || 0;
++      this.dataset = /^[A-Z][0-9]+$/.test(String(settings.dataset)) ? settings.dataset : 'D2';
++      this.context = new (global.AudioContext || global.webkitAudioContext)();
++      this.gain = this.context.createGain();
++      this.gain.connect(this.context.destination);
++      // A seek stops the old buffers and starts a new renderer state; a short
++      // fade-out/in on this node keeps the discontinuity inaudible.
++      this.envelope = this.context.createGain();
++      this.envelope.connect(this.gain);
++      this.fadeAfterSeek = false;
++      this.nodes = new Set();
++      this.paused = true;
++      this.anchorTime = 0;
++      this.anchorContextTime = this.context.currentTime + 0.03;
++      this.loadedUntil = 0;
++      this.generation = 0;
++      this.rate = 48000;
++      this.channels = 2;
++      // Schedule cursor: buffers are laid back to back from the first kept sample.
++      this.cursor = null;
++      this.finished = false;
++      this.timer = setInterval(() => {
++        if (!this.paused && this.duration && this.currentTime >= this.duration) {
++          this.pause();
++          if (this.onEnded) this.onEnded();
++        }
++        if (!this.paused) this.pump();
++        this.onUpdate();
++      }, 200);
++      // Resume during the click gesture, before the asynchronous playlist request.
++      this.started = this.context.resume().then(() => this.context.suspend());
++    }
++
++    get currentTime() {
++      const time = this.paused ? this.anchorTime
++        : this.anchorTime + Math.max(0, this.context.currentTime - this.anchorContextTime);
++      return Math.min(this.duration || Infinity, time);
++    }
++
++    set currentTime(value) { const pending = this.seek(value); if (pending) pending.catch(() => {}); }
++
++    async load(url) {
++      const gen = this.generation;
++      await this.started;
++      if (gen !== this.generation) throw new DOMException('stale', 'AbortError');
++      this.controller = new AbortController();
++      this.playlist = await global.AmDecrypt.openTrack(url, this.controller.signal);
++      if (gen !== this.generation) throw new DOMException('stale', 'AbortError');
++      this.duration = this.playlist.duration;
++      this.decoder = new JocDecoder();
++      await this.decoder.open({ mode: this.mode, gainDb: this.gainDb, dataset: this.dataset });
++      if (gen !== this.generation) throw new DOMException('stale', 'AbortError');
++      this.nextIndex = 0;
++      this.cursor = null;
++      this.finished = false;
++      this.fadeAfterSeek = true;
++      try { this.envelope.gain.value = 0; } catch {}
++      await this.pump(true);
++    }
++
++    setGain(gainDb) {
++      this.gainDb = Number(gainDb) || 0;
++      if (this.decoder) this.decoder.setGain(this.gainDb).catch(() => {});
++    }
++
++    /** Switches the HRTF field in place: reopen the worker, then resume at the
++     *  current position (seek rebuilds the pre-roll for the new field). */
++    async setDataset(dataset) {
++      this.dataset = /^[A-Z][0-9]+$/.test(String(dataset)) ? dataset : 'D2';
++      if (!this.decoder || !this.playlist) return;
++      const time = this.currentTime;
++      await this.decoder.open({ mode: this.mode, gainDb: this.gainDb, dataset: this.dataset });
++      await this.seek(time);
++    }
++
++    async pump(first = false) {
++      if (this.busy || this.failed || !this.playlist || !this.decoder) return;
++      this.busy = true;
++      const gen = this.generation;
++      const required = first;
++      try {
++        const { segments } = this.playlist;
++        while (this.nextIndex < segments.length && (first || segments[this.nextIndex].time < this.currentTime + 12)) {
++          const seg = segments[this.nextIndex];
++          const encrypted = await this.playlist.load(seg, this.controller.signal);
++          if (gen !== this.generation) return;
++          const decoded = await this.decoder.decode(encrypted);
++          if (gen !== this.generation) return;
++          this.rate = decoded.rate || this.rate;
++          if (decoded.status) {
++            this.overUnity += decoded.status.overUnity || 0;
++            this.nonFinite += decoded.status.nonFinite || 0;
++            this.peak = Math.max(this.peak, decoded.status.peak || 0);
++            if ((decoded.status.overUnity || 0) > 0 && this.onClip) this.onClip(this.overUnity);
++          }
++          this.decodedMs += decoded.ms || 0;
++          this.decodedAudio += (decoded.samples || 0) / this.rate;
++          if (decoded.memoryBytes) this.wasmBytes = decoded.memoryBytes;
++          // A seek drops the samples before the target; the first kept sample is
++          // the target itself. After that the renderer is sample-continuous, so the
++          // buffers are scheduled back to back instead of on segment timestamps
++          // (the binaural kernel holds 961 samples back at the start, which would
++          // otherwise shift every later segment).
++          const start = this.cursor !== null ? this.cursor : Math.max(seg.time, this.anchorTime);
++          if (decoded.samples > 0) {
++            const buffer = this.context.createBuffer(2, decoded.samples, this.rate);
++            const left = buffer.getChannelData(0);
++            const right = buffer.getChannelData(1);
++            const frames = decoded.frames;
++            for (let i = 0; i < decoded.samples; i++) {
++              left[i] = frames[i * 2];
++              right[i] = frames[i * 2 + 1];
++            }
++            const node = this.context.createBufferSource();
++            node.buffer = buffer;
++            node.connect(this.envelope);
++            node.onended = () => { this.nodes.delete(node); node.disconnect(); };
++            this.nodes.add(node);
++            const when = Math.max(this.context.currentTime + 0.01,
++              this.anchorContextTime + start - this.anchorTime);
++            if (this.fadeAfterSeek) {
++              this.fadeAfterSeek = false;
++              this.envelope.gain.setValueAtTime(0, when);
++              this.envelope.gain.linearRampToValueAtTime(1, when + 0.02);
++            }
++            node.start(when);
++            this.cursor = start + decoded.samples / this.rate;
++          }
++          this.loadedUntil = Math.max(this.loadedUntil, start + decoded.samples / this.rate);
++          this.nextIndex++;
++          first = false;
++          this.onUpdate();
++          if (required) break;
++        }
++      } catch (error) {
++        if (required && gen === this.generation) throw error;
++        if (error.name !== 'AbortError' && gen === this.generation) {
++          this.failed = true;
++          this.pause();
++          this.onError(error);
++        }
++      } finally {
++        this.busy = false;
++      }
++    }
++
++    async play() {
++      if (this.seeking) { this.resumeAfterSeek = true; return this.seekTask; }
++      this.failed = false;
++      await this.context.resume();
++      this.paused = false;
++      this.onUpdate();
++      this.pump();
++    }
++
++    pause() {
++      if (this.seeking) { this.resumeAfterSeek = false; return; }
++      if (this.paused) return;
++      this.anchorTime = this.currentTime;
++      this.anchorContextTime = this.context.currentTime;
++      this.paused = true;
++      this.context.suspend();
++      this.onUpdate();
++    }
++
++    seek(time) {
++      if (!this.playlist) return;
++      this.generation++;
++      const gen = this.generation;
++      this.failed = false;
++      this.resumeAfterSeek = !this.paused || (this.seeking && this.resumeAfterSeek);
++      this.seeking = true;
++      this.paused = true;
++      for (const node of this.nodes) { try { node.stop(); } catch {} node.disconnect(); }
++      this.nodes.clear();
++      this.anchorTime = Math.max(0, Math.min(time, this.duration));
++      this.anchorContextTime = this.context.currentTime + 0.03;
++      this.loadedUntil = this.anchorTime;
++      this.cursor = null;
++      this.finished = false;
++      // Rebuild the renderer state from a little before the target, as the C++
++      // streaming API and the foobar2000 component do: 64 syncframes of pre-roll.
++      const preroll = (64 * 1536) / 48000;
++      this.nextIndex = segmentAt(this.playlist.segments, Math.max(0, this.anchorTime - preroll));
++      const segment = this.playlist.segments[this.nextIndex];
++      const segmentStart = segment ? segment.time : this.anchorTime;
++      const skip = Math.max(0, Math.round((this.anchorTime - segmentStart) * this.rate));
++      this.onUpdate();
++      const task = (async () => {
++        await this.context.suspend();
++        while (this.busy && gen === this.generation) await new Promise((resolve) => setTimeout(resolve, 10));
++        if (gen !== this.generation) return;
++        await this.decoder.reset(skip);
++        if (gen !== this.generation) return;
++        this.anchorContextTime = this.context.currentTime + 0.03;
++        await this.pump(true);
++        if (gen === this.generation && this.resumeAfterSeek) {
++          await this.context.resume();
++          this.paused = false;
++          this.onUpdate();
++          this.pump();
++        }
++      })().catch((error) => {
++        if (gen === this.generation && error.name !== 'AbortError') {
++          this.failed = true;
++          this.onError(error);
++        }
++        throw error;
++      })
++        .finally(() => { if (gen === this.generation) { this.seeking = false; this.seekTask = null; } });
++      this.seekTask = task;
++      return task;
++    }
++
++    destroy() {
++      this.generation++;
++      clearInterval(this.timer);
++      if (this.controller) this.controller.abort();
++      if (this.decoder) this.decoder.destroy();
++      for (const node of this.nodes) { try { node.stop(); } catch {} node.disconnect(); }
++      this.nodes.clear();
++      this.context.close();
++    }
++  }
++
++  /**
+    * MSE 播放。与 music.apple.com（MusicKit）相同，整个队列共用一个 MediaSource / SourceBuffer：
+    * 当前曲目的分段全部追加后，把下一首（setNext）的 init 与分段以 timestampOffset 接在它的缓冲末尾，
+    * <audio> 不换 src、不暂停、不触发 ended，播放位置越过接缝时 onTrackChange 通知播放器换曲目信息。
+@@ -1213,19 +1572,24 @@
+      */
+     renderMode() {
+       if (!this.current) return;
+-      const ec3 = this.current.mode === 'ec3';
++      const mode = this.current.mode;
+       const channels = this.pcm && this.pcm.channels;
+       const badge = this.$('.player-mode');
+-      const label = ec3 && channels ? t('player.pcmChannels', { n: channels - 1 }) : modeLabel(this.current.mode);
+-      const noticeKey = ec3 ? 'player.pcmNotice'
+-        : this.current.mode === 'flac' ? 'player.flacNotice' : null;
++      const label = mode === 'ec3' && channels ? t('player.pcmChannels', { n: channels - 1 }) : modeLabel(mode);
++      const joc = mode === 'joc2' || mode === 'jocbin';
++      const noticeKey = mode === 'ec3' ? 'player.pcmNotice'
++        : mode === 'joc2' && this.jocHrtfFailed ? 'player.jocHrtfMissing'
++        : joc ? 'player.jocNotice'
++        : mode === 'flac' ? 'player.flacNotice' : null;
+       badge.textContent = label;
+       if (noticeKey) badge.insertAdjacentHTML('beforeend', ICON_INFO);
+       badge.hidden = false;
+       badge.disabled = !noticeKey;
+       badge.title = t(noticeKey ? 'player.modeInfo' : 'player.mode');
+       badge.setAttribute('aria-label', `${t('player.mode')}: ${label}`);
+-      this.$('.player-notice').textContent = noticeKey ? t(noticeKey) : '';
++      this.$('.player-notice').textContent = !noticeKey ? ''
++        : joc ? t(noticeKey, { gain: jocSettings().gain, mode: modeLabel(mode) })
++        : t(noticeKey);
+       if (!noticeKey) { this.closeNotice(); return; }
+       this.placeNotice();
+       if (this.root.closest('.lyrics-controls')) return;
+@@ -1288,9 +1652,21 @@
+       button.title = label;
+     }
+ 
+-    transport() { return this.current && this.current.mode === 'ec3' && this.pcm ? this.pcm : this.clock; }
++    transport() { return this.current && isPcmMode(this.current.mode) && this.pcm ? this.pcm : this.clock; }
+ 
+     updatePcm() {
++      // 设置里改了衰减：已经在播的 JOC 引擎立即生效
++      if (this.pcm instanceof JocEngine) {
++        const gain = jocSettings().gain;
++        if (gain !== this.pcm.gainDb) this.pcm.setGain(gain);
++        const dataset = jocSettings().dataset;
++        if (dataset !== this.pcm.dataset && !this.pcm.switchingDataset) {
++          this.pcm.switchingDataset = true;
++          this.pcm.setDataset(dataset)
++            .catch((error) => this.showError(error.message || String(error)))
++            .finally(() => { this.pcm.switchingDataset = false; });
++        }
++      }
+       this.renderToggle();
+       this.renderProgress();
+       this.renderMode();
+@@ -2032,6 +2408,33 @@
+ 
+     async tryMode(mode, item, resumeAt, token) {
+       this.teardown();
++      if (mode === 'joc2' || mode === 'jocbin') {
++        const joc = jocSettings();
++        this.pcm = new JocEngine(
++          () => this.updatePcm(),
++          (err) => this.showError(err.message || String(err)),
++          () => this.ended(),
++          {
++            mode: mode === 'jocbin' ? 'binaural' : 'speaker',
++            gainDb: joc.gain,
++            dataset: joc.dataset,
++            onClip: () => this.showError(t('player.jocClip', { gain: jocSettings().gain })),
++          },
++        );
++        this.pcm.gain.gain.value = this.audio.volume;
++        try {
++          await this.pcm.load(item.m3u8Url);
++        } catch (err) {
++          // 双耳缺少有效 HRTF 时退回 Speaker 2.0，并在标志上说明原因
++          if (mode === 'jocbin') this.jocHrtfFailed = true;
++          throw err;
++        }
++        if (token !== this.playToken) return;
++        this.current.duration = this.pcm.duration;
++        if (resumeAt > 0) await this.pcm.seek(resumeAt);
++        await this.pcm.play();
++        return;
++      }
+       if (mode === 'ec3') {
+         this.pcm = new PcmEngine(() => this.updatePcm(), (err) => this.showError(err.message || String(err)), () => this.ended());
+         this.pcm.gain.gain.value = this.audio.volume;
+@@ -2082,7 +2485,7 @@
+ 
+     renderToggle() {
+       const a = this.transport();
+-      const waiting = this.loading && a.paused || (!a.paused && this.current.mode !== 'ec3' && a.readyState < 3);
++      const waiting = this.loading && a.paused || (!a.paused && !isPcmMode(this.current.mode) && a.readyState < 3);
+       if (!a.paused) this.loading = false;
+       const btn = this.$('.player-toggle');
+       btn.innerHTML = waiting ? ICON_LOADING : (a.paused ? ICON_PLAY : ICON_PAUSE);
+@@ -2097,7 +2500,7 @@
+       this.$('.seek-fill').style.width = `${ratio * 100}%`;
+       this.$('.seek-thumb').style.left = `${ratio * 100}%`;
+       let bufEnd = 0;
+-      if (this.current && this.current.mode === 'ec3' && this.pcm) {
++      if (this.current && isPcmMode(this.current.mode) && this.pcm) {
+         bufEnd = this.pcm.loadedUntil;
+       } else {
+         const b = this.audio.buffered;
+@@ -2212,7 +2615,7 @@
+     }
+   }
+ 
+-  const api = { AmPlayer, Marquee, artistNodes, qualityBadge, qualityIcon, segmentAt, formatTime, detectMode, detectModes, mimeFor };
++  const api = { AmPlayer, Marquee, artistNodes, qualityBadge, qualityIcon, segmentAt, formatTime, detectMode, detectModes, mimeFor, jocSettings };
+   if (typeof module !== 'undefined' && module.exports) module.exports = { ...api, MseEngine };
+   else global.AmHook = api;
+ })(typeof window !== 'undefined' ? window : globalThis);
+diff -ruN '--exclude=.DS_Store' a/src/ui/prefs.mjs b/src/ui/prefs.mjs
+--- a/src/ui/prefs.mjs	2026-10-24 17:31:10.421569400 +0800
++++ b/src/ui/prefs.mjs	2026-10-24 17:31:10.503848400 +0800
+@@ -87,6 +87,13 @@
+ }
+ 
+ export const OPTIONS = {
++  // JOC 对象渲染：off 关闭（浏览器默认的 MSE / EC-3 PCM），speaker = Speaker 2.0，binaural = 双耳
++  joc: {
++    mode: ['off', 'speaker', 'binaural'],
++    // SADIE II 数据集编译的 HRTF 场，可在设置里选择
++    dataset: ['D1', 'D2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9',
++      'H10', 'H11', 'H12', 'H13', 'H14', 'H15', 'H16', 'H17', 'H18', 'H19', 'H20'],
++  },
+   download: {
+     // 首选音质；没有时按 fallback 降级
+     codec: CODEC_GROUPS.flatMap(([, list]) => list),
+@@ -102,6 +109,13 @@
+ };
+ 
+ export const DEFAULTS = {
++  joc: {
++    mode: 'off',
++    // 输出衰减（dB）：对象叠加容易超过满刻度，提示用户至少衰减 4 dB
++    gain: 0,
++    // 双耳 HRTF 数据集（SADIE II）
++    dataset: 'D2',
++  },
+   download: {
+     codec: 'alac',
+     alacMax: 192000,
+@@ -183,6 +197,13 @@
+ function clean(section, raw) {
+   const d = DEFAULTS[section];
+   const r = raw && typeof raw === 'object' ? raw : {};
++  if (section === 'joc') {
++    return {
++      mode: oneOf(r.mode, OPTIONS.joc.mode, d.mode),
++      gain: int(r.gain, -60, 0, d.gain),
++      dataset: oneOf(r.dataset, OPTIONS.joc.dataset, d.dataset),
++    };
++  }
+   if (section !== 'download') return { ...d, ...r };
+   const o = OPTIONS.download;
+   return {
+@@ -270,6 +291,9 @@
+   },
+ };
+ 
++// 播放器（player.js，经典脚本）读取同一份设置：模块加载后挂到 window 上
++if (typeof window !== 'undefined') window.AmPrefs = prefs;
++
+ // 其他标签页修改后同步
+ addEventListener('storage', (event) => {
+   if (event.key !== STORAGE_KEY) return;
+diff -ruN '--exclude=.DS_Store' a/src/ui/views/home.html b/src/ui/views/home.html
+--- a/src/ui/views/home.html	2026-10-24 17:31:10.430046800 +0800
++++ b/src/ui/views/home.html	2026-10-24 17:31:10.512947700 +0800
+@@ -64,10 +64,16 @@
+     <div class="footer-row">
+       <span data-i18n="footer.tagline"></span>
+       <span data-i18n="footer.note"></span>
+-      <a class="footer-github" href="https://github.com/itouakirai/am-hook" target="_blank" rel="noopener noreferrer">
+-        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+-        <span data-i18n="footer.github"></span>
+-      </a>
++      <div class="footer-links">
++        <a class="footer-github" href="https://github.com/itouakirai/am-hook" target="_blank" rel="noopener noreferrer">
++          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
++          <span data-i18n="footer.github"></span>
++        </a>
++        <a class="footer-github" href="https://github.com/TheM14/am-hook-joc" target="_blank" rel="noopener noreferrer">
++          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
++          <span data-i18n="footer.patch"></span>
++        </a>
++      </div>
+     </div>
+     <p class="footer-credits">
+       <span data-i18n="footer.thanks"></span>
+diff -ruN '--exclude=.DS_Store' a/src/ui/views/settings.html b/src/ui/views/settings.html
+--- a/src/ui/views/settings.html	2026-10-24 17:31:10.434047100 +0800
++++ b/src/ui/views/settings.html	2026-10-24 17:31:10.516949400 +0800
+@@ -35,6 +35,8 @@
+       </div>
+     </section>
+ 
++    <!-- JOC 对象渲染（views/settings.mjs 挂载 joc-settings.mjs） -->
++    <div id="joc"></div>
+     <div id="download"></div>
+   </main>
+ </div>
+diff -ruN '--exclude=.DS_Store' a/src/ui/views/settings.mjs b/src/ui/views/settings.mjs
+--- a/src/ui/views/settings.mjs	2026-10-24 17:31:10.434047100 +0800
++++ b/src/ui/views/settings.mjs	2026-10-24 17:31:10.516949400 +0800
+@@ -4,6 +4,7 @@
+ import { formatPath, fitFolder, fitFile, templateIssues, TEMPLATE_VAR_GROUPS, TEMPLATE_SCOPES } from '../naming.mjs';
+ import { downloads } from '../downloads.mjs';
+ import { userToken, askToken, onTokenChange } from '../station.mjs';
++import { mountJocSettings } from '../joc-settings.mjs';
+ 
+ const { AmI18n, AmDecrypt } = window;
+ const { t } = AmI18n;
+@@ -30,6 +31,7 @@
+ export function mount({ root, signal, onLangChange, toast }) {
+   document.title = `${t('set.title')} · am-hook`;
+   const host = root.querySelector('#download');
++  mountJocSettings(root, signal);
+   /** 控件：每项设置变化后刷新显示（正在输入的文本框除外） */
+   const controls = [];
+   let openVars = null;
+@@ -366,7 +368,7 @@
+       quality, mv, performance, save, naming, tags, cover, lyrics, footer);
+ 
+     // 目录
+-    const groups = [['general', 'set.general'], ['quality', 'set.quality'], ['mv', 'set.mvSection'], ['save', 'set.save'], ['naming', 'set.naming'], ['tags', 'set.tags'], ['cover', 'set.cover'], ['lyrics', 'set.lyrics']];
++    const groups = [['general', 'set.general'], ['joc', 'set.joc'], ['quality', 'set.quality'], ['mv', 'set.mvSection'], ['save', 'set.save'], ['naming', 'set.naming'], ['tags', 'set.tags'], ['cover', 'set.cover'], ['lyrics', 'set.lyrics']];
+     root.querySelector('#toc').replaceChildren(...groups.map(([id, key]) => {
+       const a = el('a', { href: `#${id}`, className: 'set-toc-link', textContent: t(key) });
+       a.addEventListener('click', (e) => { e.preventDefault(); root.querySelector(`#${id}`).scrollIntoView({ behavior: 'smooth', block: 'start' }); });

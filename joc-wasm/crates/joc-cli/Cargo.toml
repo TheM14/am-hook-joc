@@ -1,0 +1,13 @@
+[package]
+name = "joc-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Native comparison harness for the JOC renderer (not part of the browser build)"
+
+[[bin]]
+name = "joc-cli"
+path = "src/main.rs"
+
+[dependencies]
+joc-core = { path = "../joc-core" }

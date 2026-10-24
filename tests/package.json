@@ -1,0 +1,9 @@
+{
+  "name": "am-hook-joc-tests",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end checks for the JOC patch (Playwright drives the real am-hook UI).",
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}

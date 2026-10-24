@@ -1,0 +1,15 @@
+[package]
+name = "joc-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "E-AC-3 JOC object reconstruction and stereo rendering (speaker 2.0 / binaural)"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# .jochrtf is a ZIP container of .npy members.
+flate2 = "1"
+# The payload digest in the .jochrtf header.
+sha2 = "0.10"
