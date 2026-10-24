@@ -13,13 +13,15 @@ set -eu
 cd "$(dirname "$0")/.."
 REPO=$(pwd)
 UPSTREAM=${UPSTREAM:-../am-hook}
-TAG=${TAG:-v0.5.9}
+BASE=${BASE:-$UPSTREAM}
+TAG=${TAG:-$(git -C "$BASE" describe --tags --abbrev=0 2>/dev/null || true)}
+if [ -z "$TAG" ]; then echo "error: set TAG to the upstream release to diff against (BASE must be a git checkout with that tag)" >&2; exit 2; fi
 WORK=${WORK:-$(mktemp -d)}
-PATCH=${PATCH:-patches/am-hook-joc-${TAG}.patch}
+PATCH=${PATCH:-patches/am-hook-joc.patch}
 
 mkdir -p "$WORK/a" "$WORK/b"
 echo "upstream: $UPSTREAM @ $TAG"
-git -C "$UPSTREAM" archive "$TAG" | tar -x -C "$WORK/a"
+git -C "$BASE" archive "$TAG" | tar -x -C "$WORK/a"
 
 # Copy the working tree without VCS data, build output, or the HRTF assets.
 tar -C "$UPSTREAM" -cf - \
@@ -27,7 +29,7 @@ tar -C "$UPSTREAM" -cf - \
   --exclude=target \
   --exclude=node_modules \
   --exclude=src/ui/joc.wasm \
-  --exclude='src/ui/joc-hrtf-*.jochrtf' \
+  --exclude='src/ui/joc-hrtf-*.jochrtf' \n  --exclude='*.rej' \n  --exclude='*.orig' \
   . | tar -x -C "$WORK/b"
 
 # The workspace itself carries no incidental files; keep the diff reviewable.

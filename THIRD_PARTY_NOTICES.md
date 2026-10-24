@@ -3,8 +3,8 @@
 ## am-hook
 
 The patch applies to [am-hook](https://github.com/itouakirai/am-hook) releases
-and is distributed under the same AGPL-3.0-only license; each release has its
-own patch in `patches/`. am-hook's EC-3 decoder (`src/ui/ec3.wasm`,
+and is distributed under the same AGPL-3.0-only license; the patch in
+`patches/am-hook-joc.patch` is applied to whichever upstream release is built. am-hook's EC-3 decoder (`src/ui/ec3.wasm`,
 `src/ui/ec3-runtime.mjs`) is `@mediabunny/ac3` 1.59.1 (MPL-2.0, see
 `src/ui/EC3-LICENSE.txt`), built on FFmpeg's AC-3/E-AC-3 decoder.
 

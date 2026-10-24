@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Upstream release tag to build (for example v0.5.9)"
+        description: "Upstream release tag to build"
         required: true
         type: string
 
@@ -160,7 +160,7 @@ jobs:
 
       - name: Add the standalone patch and checksums
         run: |
-          cp "patches/am-hook-joc-$TAG.patch" "assets/am-hook-joc-$TAG.patch"
+          cp patches/am-hook-joc.patch assets/am-hook-joc.patch
           cd assets
           sha256sum * > SHA256SUMS.txt
           ls -la

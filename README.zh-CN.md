@@ -33,9 +33,12 @@ git clone https://github.com/itouakirai/am-hook.git
 cd am-hook && git checkout <upstream-tag>
 
 # 在本仓库中执行：
-bash scripts/apply.sh ../am-hook --tag <upstream-tag>   # 应用对应补丁
+bash scripts/apply.sh ../am-hook                        # 应用补丁
 bash scripts/build.sh ../am-hook                        # 构建 joc.wasm 和 am-hook
 ```
+
+`patches/am-hook-joc.patch` 针对最新上游 Release 维护。上游改动了补丁涉及的文件时，
+需要更新补丁；CI 会把它应用到最新 Release，补丁不再匹配时会在创建 Tag 之前失败。
 
 ## HRTF 来源
 
@@ -61,7 +64,7 @@ bash scripts/build.sh ../am-hook                        # 构建 joc.wasm 和 am
 ## 仓库结构
 
 ```
-patches/                 每个上游版本一份补丁
+patches/                 一份补丁，应用到上游 Release
 hrtf/                    编译好的 SADIE II HRTF 场
 joc-wasm/                Rust workspace
   crates/joc-core/       码流、DSP 与流式状态（本机与 wasm 共用）

@@ -24,7 +24,7 @@ done
 echo "== Rust unit tests =="
 ( cd "$REPO/joc-wasm" && cargo test -p joc-core )
 
-TAG_CHECK=${TAG:-v0.5.9}
+TAG_CHECK=${TAG:-}
 echo "== patch applies to $TAG_CHECK =="
 if [ -d "${UPSTREAM:-}" ]; then
   "$REPO/scripts/apply.sh" "$UPSTREAM" --check

@@ -32,7 +32,6 @@ from pathlib import Path
 
 UPSTREAM = "itouakirai/am-hook"
 WORKFLOW = "release.yml"
-SOURCE_TAG = "v0.5.9"  # fallback when the repository has no tags yet
 API = "https://api.github.com"
 
 
@@ -53,7 +52,7 @@ def asset_names(tag: str) -> list[str]:
         f"am-hook-joc-{tag}-linux-x86_64",
         f"am-hook-joc-{tag}-macos-x86_64",
         f"am-hook-joc-{tag}-macos-aarch64",
-        f"am-hook-joc-{tag}.patch",
+        "am-hook-joc.patch",
         f"am-hook-joc-{tag}-source.tar.gz",
         "SHA256SUMS.txt",
     ]
@@ -166,32 +165,27 @@ def assets_complete(release: dict | None, tag: str, assets: list[dict] | None) -
 
 
 def plan(upstream_tags: list[str], local_tags: list[str], releases_by_tag: dict[str, dict | None],
-         assets_by_tag: dict[str, list[dict]], patches: set[str]) -> Plan:
+         assets_by_tag: dict[str, list[dict]]) -> Plan:
     """Pure planning step, used by the monitor and by --self-test."""
     result = Plan()
-    local_published = [tag for tag in local_tags if version_key(tag)]
-    newest_local = max(local_published, key=version_key) if local_published else None
-
-    # Recovery has priority: an existing tag without a complete release.
-    candidates = []
-    for tag in sorted(local_tags, key=version_key):
-        if not version_key(tag):
-            continue
-        if not assets_complete(releases_by_tag.get(tag), tag, assets_by_tag.get(tag)):
-            candidates.append(tag)
-            break
-    if candidates:
-        result.recover = candidates
-
     upstream = sorted({tag for tag in upstream_tags if version_key(tag)}, key=version_key)
-    if newest_local is None:
-        if upstream:
-            result.publish = [upstream[-1]]
+    released = [
+        tag for tag in local_tags
+        if version_key(tag) and assets_complete(releases_by_tag.get(tag), tag, assets_by_tag.get(tag))
+    ]
+    newest_released = max(released, key=version_key) if released else None
+
+    # Every tag without a complete release is retried, oldest first.
+    for tag in sorted(local_tags, key=version_key):
+        if version_key(tag) and not assets_complete(
+                releases_by_tag.get(tag), tag, assets_by_tag.get(tag)):
+            result.recover.append(tag)
+
+    if newest_released is None:
+        result.publish = [upstream[-1]] if upstream else []
     else:
-        result.publish = [tag for tag in upstream if version_key(tag) > version_key(newest_local)]
-    result.publish = [tag for tag in result.publish if tag not in local_tags or tag == (result.recover[0] if result.recover else None)]
-    if not result.publish:
-        result.skip = [tag for tag in upstream if version_key(tag) <= version_key(newest_local)] if newest_local else []
+        result.publish = [tag for tag in upstream if version_key(tag) > version_key(newest_released)]
+        result.skip = [tag for tag in upstream if version_key(tag) <= version_key(newest_released)]
     return result
 
 
@@ -276,7 +270,7 @@ def command_prepare(args) -> int:
     root = Path(__file__).resolve().parents[1]
     tag = args.tag
     target = Path(args.dir).resolve()
-    patch = root / "patches" / f"am-hook-joc-{tag}.patch"
+    patch = root / "patches" / "am-hook-joc.patch"
     if not patch.is_file():
         log(f"error: missing patch for {tag}: {patch}")
         return 2
@@ -345,7 +339,7 @@ def command_package_source(args) -> int:
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     archive = out / f"am-hook-joc-{tag}-source.tar.gz"
-    patch = root / "patches" / f"am-hook-joc-{tag}.patch"
+    patch = root / "patches" / "am-hook-joc.patch"
     skipped = {"target", ".git", "node_modules", "dist"}
 
     def keep(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
@@ -432,6 +426,38 @@ def command_publish(args) -> int:
     return 0
 
 
+def command_latest_upstream(args) -> int:
+    client = GitHub(args.token, UPSTREAM)
+    release = client.request("GET", f"/repos/{UPSTREAM}/releases/latest")
+    print(release["tag_name"])
+    return 0
+
+
+def command_check(args) -> int:
+    """Apply the patch to one upstream tag and type-check the result."""
+    work = Path(args.dir).resolve()
+    prepare_args = argparse.Namespace(
+        tag=args.tag, dir=str(work), out=None, token=args.token, check_release=True)
+    result = command_prepare(prepare_args)
+    if result != 0:
+        return result
+    root = Path(__file__).resolve().parents[1]
+    import subprocess
+    env = os.environ.copy()
+    env["OUT"] = str(work / "src" / "ui" / "joc.wasm")
+    bash = os.environ.get("BASH") or "bash"
+    build = subprocess.run([bash, "scripts/build-joc-wasm.sh"], cwd=root, env=env)
+    if build.returncode != 0:
+        log(f"error: cannot build joc.wasm for {args.tag}")
+        return 1
+    check = subprocess.run(["cargo", "check"], cwd=work)
+    if check.returncode != 0:
+        log(f"error: patched {args.tag} does not compile")
+        return 1
+    log(f"{args.tag} applies and compiles")
+    return 0
+
+
 def command_monitor(args) -> int:
     client = GitHub(args.token, args.repo)
     releases = [r for r in client.upstream_releases()
@@ -441,19 +467,21 @@ def command_monitor(args) -> int:
     local_releases = {tag: client.release(tag) for tag in local_tags}
     assets = {tag: (client.release_assets(release) if release else [])
               for tag, release in local_releases.items()}
-    patches = {path.name[len("am-hook-joc-"):-len(".patch")]
-               for path in (Path(__file__).resolve().parents[1] / "patches").glob("am-hook-joc-*.patch")}
-    decision = plan(upstream, local_tags, local_releases, assets, patches)
-    needed = decision.recover + decision.publish
-    missing = [tag for tag in needed if tag not in patches]
-    log(f"decision: recover={decision.recover} publish={decision.publish}"
-        + (f" missing_patch={missing}" if missing else ""))
+    decision = plan(upstream, local_tags, local_releases, assets)
+    log(f"decision: recover={decision.recover} publish={decision.publish}")
     if args.dry_run:
-        return 2 if missing else 0
-    if missing:
-        log(f"error: no patch for {missing[0]}; add patches/am-hook-joc-{missing[0]}.patch")
-        return 2
-    for tag in decision.recover + decision.publish:
+        return 0
+    targets = sorted(dict.fromkeys(decision.recover + decision.publish), key=version_key)
+    for tag in targets:
+        import tempfile
+        work = Path(tempfile.mkdtemp(prefix=f"joc-check-{tag}-"))
+        try:
+            result = command_check(argparse.Namespace(tag=tag, dir=str(work), token=args.token))
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        if result != 0:
+            log(f"error: {tag} failed the compatibility check")
+            return 1
         if tag not in local_tags:
             sha = default_branch_sha(client, args.repo)
             client.create_tag(tag, sha)
@@ -514,28 +542,28 @@ def run_self_test() -> int:
             failures.append(f"{name}: {actual} != {expected}")
 
     # First run: no local tags, several upstream releases -> only the latest.
-    d = plan(["v0.5.1", "v0.5.7", "v0.5.9"], [], {}, {}, set())
+    d = plan(["v0.5.1", "v0.5.7", "v0.5.9"], [], {}, {})
     check("initial", d.publish, ["v0.5.9"])
 
     # Up to date: no action.
     local = ["v0.5.9"]
     rel = {"v0.5.9": {"tag_name": "v0.5.9", "draft": False}}
     ast = {"v0.5.9": complete_assets("v0.5.9")}
-    d = plan(["v0.5.7", "v0.5.9"], local, rel, ast, {"v0.5.9"})
+    d = plan(["v0.5.7", "v0.5.9"], local, rel, ast)
     check("noop", (d.publish, d.recover), ([], []))
 
     # New versions, ascending, multiple pending.
-    d = plan(["v0.5.9", "v0.5.10", "v0.5.12", "v0.5.11"], local, rel, ast, {"v0.5.9"})
+    d = plan(["v0.5.9", "v0.5.10", "v0.5.12", "v0.5.11"], local, rel, ast)
     check("ascending", d.publish, ["v0.5.10", "v0.5.11", "v0.5.12"])
 
     # Incomplete release is recovered first.
     broken = {"v0.5.9": {"tag_name": "v0.5.9", "draft": False}}
-    d = plan(["v0.5.9", "v0.5.10"], local, broken, {"v0.5.9": []}, {"v0.5.9"})
+    d = plan(["v0.5.9", "v0.5.10"], local, broken, {"v0.5.9": []})
     check("recover", (d.recover, d.publish), (["v0.5.9"], ["v0.5.10"]))
 
     # Draft release counts as missing.
     draft = {"v0.5.9": {"tag_name": "v0.5.9", "draft": True}}
-    d = plan(["v0.5.9"], local, draft, {"v0.5.9": complete_assets("v0.5.9")}, {"v0.5.9"})
+    d = plan(["v0.5.9"], local, draft, {"v0.5.9": complete_assets("v0.5.9")})
     check("draft", d.recover, ["v0.5.9"])
 
     if failures:
@@ -573,6 +601,16 @@ def main() -> int:
     publish.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
     publish.add_argument("--dry-run", action="store_true")
     publish.set_defaults(func=command_publish)
+
+    latest_parser = sub.add_parser("latest-upstream")
+    latest_parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
+    latest_parser.set_defaults(func=command_latest_upstream)
+
+    check_parser = sub.add_parser("check")
+    check_parser.add_argument("--tag", required=True)
+    check_parser.add_argument("--dir", required=True)
+    check_parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
+    check_parser.set_defaults(func=command_check)
 
     monitor = sub.add_parser("monitor")
     monitor.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "TheM14/am-hook-joc"))

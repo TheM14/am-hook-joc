@@ -77,18 +77,20 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Resolve the newest patch
+      - name: Resolve the latest upstream release
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag=$(python -c "import glob; fs=sorted(glob.glob('patches/am-hook-joc-*.patch'), key=lambda p:[int(x) for x in p.rsplit('-',1)[1][:-6].lstrip('v').split('.')]); print(fs[-1].rsplit('-',1)[1][:-6])")
-          echo "checking patch $tag"
-          echo "JOC_TAG=$tag" >> "$GITHUB_ENV"
+          tag=$(python scripts/release_tool.py latest-upstream)
+          echo "checking upstream $tag"
+          echo "UPSTREAM_TAG=$tag" >> "$GITHUB_ENV"
 
       - name: Prepare upstream source with the patch
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/release_tool.py prepare --tag "$JOC_TAG" --dir am-hook --check-release
+        run: python scripts/release_tool.py prepare --tag "$UPSTREAM_TAG" --dir am-hook --check-release
 
       - name: Build the renderer and the player
         shell: bash

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Applies the JOC patch to a clean am-hook checkout of the locked release.
 #
-#   scripts/apply.sh /path/to/am-hook [--tag v0.5.9] [--check]
+#   scripts/apply.sh /path/to/am-hook [--tag upstream-tag] [--check]
 #
 # The patch only touches the web front end (assets.rs, player.js, prefs.mjs,
 # i18n.js, the settings view and three new UI files). It contains no binary: the
@@ -9,7 +9,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 REPO=$(pwd)
-TAG=v0.5.9
+TAG=
 CHECK_ONLY=0
 DIR=""
 while [ $# -gt 0 ]; do
@@ -20,20 +20,21 @@ while [ $# -gt 0 ]; do
     *) DIR=$1; shift ;;
   esac
 done
-if [ -z "$DIR" ]; then echo "usage: scripts/apply.sh /path/to/am-hook [--tag v0.5.9]" >&2; exit 2; fi
-PATCH=$REPO/patches/am-hook-joc-$TAG.patch
+if [ -z "$DIR" ]; then echo "usage: scripts/apply.sh /path/to/am-hook [--tag upstream-tag] [--check]" >&2; exit 2; fi
+PATCH=$REPO/patches/am-hook-joc.patch
+PATCH_NAME=$(basename "$PATCH")
 [ -f "$PATCH" ] || { echo "missing $PATCH (run scripts/make-patch.sh)" >&2; exit 1; }
 # A Windows checkout may have converted the patch to CRLF; git apply wants LF.
 CLEAN_PATCH=$(mktemp)
 trap 'rm -f "$CLEAN_PATCH"' EXIT
-tr -d '' < "$PATCH" > "$CLEAN_PATCH"
+tr -d '\r' < "$PATCH" > "$CLEAN_PATCH"
 PATCH=$CLEAN_PATCH
 
 cd "$DIR"
 if [ ! -d .git ]; then echo "error: $DIR is not a git checkout (the patch is applied with git apply)" >&2; exit 1; fi
 DESCRIBED=$(git describe --tags --always 2>/dev/null || true)
-if [ "$DESCRIBED" != "$TAG" ]; then
-  echo "warning: $DIR is at $DESCRIBED, expected the locked release $TAG" >&2
+if [ -n "$TAG" ] && [ "$DESCRIBED" != "$TAG" ]; then
+  echo "warning: $DIR is at $DESCRIBED, patch was written for $TAG" >&2
 fi
 
 # The JOC engine in player.js is the marker; a tree that has it is patched (the
@@ -62,5 +63,5 @@ if [ "$CHECK_ONLY" = 1 ]; then
   echo "patch applies cleanly to $DIR"
   exit 0
 fi
-git apply -p"$STRIP" "$PATCH"
-echo "applied $(basename "$PATCH") to $DIR"
+git apply -p"$STRIP" --whitespace=nowarn "$PATCH"
+echo "applied $PATCH_NAME to $DIR"

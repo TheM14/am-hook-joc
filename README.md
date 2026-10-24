@@ -42,9 +42,13 @@ git clone https://github.com/itouakirai/am-hook.git
 cd am-hook && git checkout <upstream-tag>
 
 # from this repository:
-bash scripts/apply.sh ../am-hook --tag <upstream-tag>   # apply the matching patch
+bash scripts/apply.sh ../am-hook                        # apply the patch
 bash scripts/build.sh ../am-hook                        # build joc.wasm + am-hook
 ```
+
+`patches/am-hook-joc.patch` is maintained against the newest upstream release.
+When upstream changes a file it touches, update the patch; CI applies it to the
+latest release and fails before any tag is created if it no longer fits.
 
 ## HRTF
 
@@ -73,7 +77,7 @@ shortcut to this section in its top bar.
 ## Repository layout
 
 ```
-patches/                 one patch per upstream release
+patches/                 single patch applied to upstream releases
 hrtf/                    compiled SADIE II HRTF fields
 joc-wasm/                Rust workspace
   crates/joc-core/       bitstream, DSP and streaming state (host and wasm)
