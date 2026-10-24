@@ -55,6 +55,8 @@ const before = await page.evaluate(() => ({
   mode: window.AmApp.player.current.mode,
   dataset: window.AmApp.player.pcm.dataset,
 }));
+const badgeBinaural = await page.evaluate(
+  () => document.querySelector('.player-mode')?.textContent.trim() || '');
 for (const dataset of ['H3', 'D1']) {
   await page.evaluate((value) => window.AmPrefs.set('joc', { dataset: value }), dataset);
   await page.waitForTimeout(2500);
@@ -65,7 +67,7 @@ const after = await page.evaluate(() => ({
   time: window.AmApp.player.transport().currentTime,
 }));
 
-console.log(JSON.stringify({ settings, stored, before, after, fields: [...fields], errors }, null, 2));
+console.log(JSON.stringify({ settings, stored, before, after, badgeBinaural, fields: [...fields], errors }, null, 2));
 await browser.close();
 
 const problems = [];
@@ -76,6 +78,9 @@ if (stored?.dataset !== 'H3') problems.push('selection was not persisted');
 if (before.mode !== 'jocbin' || before.dataset !== 'D2') problems.push('engine did not start on D2');
 if (after.dataset !== 'D1' || !after.playing) problems.push('live dataset switch failed');
 if (!fields.has('H3') || !fields.has('D1')) problems.push(`fields requested: ${[...fields]}`);
+if (!/JOC/.test(badgeBinaural) || !/(双耳|Binaural)/i.test(badgeBinaural)) {
+  problems.push(`binaural badge: ${badgeBinaural}`);
+}
 if (errors.length) problems.push(...errors);
 if (problems.length) {
   console.error('FAIL: ' + problems.join('; '));

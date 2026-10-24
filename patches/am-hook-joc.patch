@@ -1,6 +1,6 @@
 diff -ruN '--exclude=.DS_Store' a/src/assets.rs b/src/assets.rs
---- a/src/assets.rs	2026-10-24 18:05:05.567127200 +0800
-+++ b/src/assets.rs	2026-10-24 18:05:05.651795800 +0800
+--- a/src/assets.rs	2026-10-24 18:21:44.335064100 +0800
++++ b/src/assets.rs	2026-10-24 18:21:44.421050500 +0800
 @@ -76,6 +76,32 @@
      asset!("/assets/ec3-decode-worker.js", JS, "ec3-decode-worker.js"),
      asset!("/assets/ec3-runtime.mjs", JS, "ec3-runtime.mjs"),
@@ -35,8 +35,8 @@ diff -ruN '--exclude=.DS_Store' a/src/assets.rs b/src/assets.rs
      asset!("/assets/mv/hls.mjs", JS, "mv-hls.mjs"),
      asset!("/assets/mv/engine.mjs", JS, "mv-engine.mjs"),
 diff -ruN '--exclude=.DS_Store' a/src/ui/app.css b/src/ui/app.css
---- a/src/ui/app.css	2026-10-24 18:05:05.608400600 +0800
-+++ b/src/ui/app.css	2026-10-24 18:05:05.689825700 +0800
+--- a/src/ui/app.css	2026-10-24 18:21:44.380120500 +0800
++++ b/src/ui/app.css	2026-10-24 18:21:44.458152300 +0800
 @@ -478,6 +478,8 @@
  /* 首页底部：说明与 GitHub 链接一行，致谢一行 */
  .home-footer { flex-direction: column; gap: 10px; padding-top: 20px; border-top: 1px solid var(--line); }
@@ -47,8 +47,8 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/app.css b/src/ui/app.css
  .footer-github svg { width: 16px; height: 16px; }
  .footer-github:hover, .footer-credits a:hover { color: var(--accent); }
 diff -ruN '--exclude=.DS_Store' a/src/ui/i18n.js b/src/ui/i18n.js
---- a/src/ui/i18n.js	2026-10-24 18:05:05.615459200 +0800
-+++ b/src/ui/i18n.js	2026-10-24 18:05:05.697333100 +0800
+--- a/src/ui/i18n.js	2026-10-24 18:21:44.387354500 +0800
++++ b/src/ui/i18n.js	2026-10-24 18:21:44.465271700 +0800
 @@ -173,6 +173,7 @@
        'footer.tagline': 'am-hook · 浏览器端解密',
        'footer.note': '仅供个人学习使用',
@@ -127,7 +127,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/i18n.js b/src/ui/i18n.js
        'player.errorGeneric': 'Playback failed. Try another quality, or {hint}.',
 diff -ruN '--exclude=.DS_Store' a/src/ui/joc-decode-worker.js b/src/ui/joc-decode-worker.js
 --- a/src/ui/joc-decode-worker.js	1970-01-01 08:00:00.000000000 +0800
-+++ b/src/ui/joc-decode-worker.js	2026-10-24 18:05:05.697333100 +0800
++++ b/src/ui/joc-decode-worker.js	2026-10-24 18:21:44.465271700 +0800
 @@ -0,0 +1,374 @@
 +// E-AC-3 JOC decode + render worker. One thread does everything: the EC-3
 +// decoder (am-hook's ec3.wasm) produces the core PCM, the JOC module
@@ -505,7 +505,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/joc-decode-worker.js b/src/ui/joc-decod
 +};
 diff -ruN '--exclude=.DS_Store' a/src/ui/joc-probe.mjs b/src/ui/joc-probe.mjs
 --- a/src/ui/joc-probe.mjs	1970-01-01 08:00:00.000000000 +0800
-+++ b/src/ui/joc-probe.mjs	2026-10-24 18:05:05.697333100 +0800
++++ b/src/ui/joc-probe.mjs	2026-10-24 18:21:44.466271600 +0800
 @@ -0,0 +1,30 @@
 +// Probes the bundled HRTF without touching playback: opens a JOC stream in
 +// binaural mode inside the real worker, reports success or the loader's error,
@@ -539,7 +539,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/joc-probe.mjs b/src/ui/joc-probe.mjs
 +}
 diff -ruN '--exclude=.DS_Store' a/src/ui/joc-settings.mjs b/src/ui/joc-settings.mjs
 --- a/src/ui/joc-settings.mjs	1970-01-01 08:00:00.000000000 +0800
-+++ b/src/ui/joc-settings.mjs	2026-10-24 18:05:05.697333100 +0800
++++ b/src/ui/joc-settings.mjs	2026-10-24 18:21:44.466271600 +0800
 @@ -0,0 +1,125 @@
 +// Settings section for the optional JOC object renderer (E-AC-3 Dolby Atmos).
 +//
@@ -667,8 +667,8 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/joc-settings.mjs b/src/ui/joc-settings.
 +  signal.addEventListener('abort', () => { disposed = true; offPrefs(); offLang(); }, { once: true });
 +}
 diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
---- a/src/ui/player.js	2026-10-24 18:05:05.620459200 +0800
-+++ b/src/ui/player.js	2026-10-24 18:05:05.702615200 +0800
+--- a/src/ui/player.js	2026-10-24 18:21:44.392354400 +0800
++++ b/src/ui/player.js	2026-10-24 18:21:44.471271600 +0800
 @@ -55,14 +55,43 @@
     * 该编码在当前浏览器中可尝试的播放方式（按优先级），空数组表示不支持。
     * 全部由浏览器端解密；EC-3 按 MSE -> PCM 检测，ALAC 可回退为 FLAC。
@@ -1074,7 +1074,19 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
     * MSE 播放。与 music.apple.com（MusicKit）相同，整个队列共用一个 MediaSource / SourceBuffer：
     * 当前曲目的分段全部追加后，把下一首（setNext）的 init 与分段以 timestampOffset 接在它的缓冲末尾，
     * <audio> 不换 src、不暂停、不触发 ended，播放位置越过接缝时 onTrackChange 通知播放器换曲目信息。
-@@ -1271,6 +1627,8 @@
+@@ -1260,8 +1616,9 @@
+       const badge = this.$('.player-mode');
+       const icon = qualityIcon(c.badge, this.root.ownerDocument);
+       if (icon) icon.removeAttribute('title');
+-      const label = icon ? icon.getAttribute('aria-label') : this.modeText();
+-      badge.replaceChildren(icon || label);
++      const joc = c.mode === 'joc2' || c.mode === 'jocbin';
++      const label = joc ? this.modeText() : icon ? icon.getAttribute('aria-label') : this.modeText();
++      badge.replaceChildren(joc ? label : icon || label);
+       badge.hidden = false;
+       badge.title = t('player.qualityInfo');
+       badge.setAttribute('aria-label', `${t('player.qualityInfo')}: ${[label, c.label].filter(Boolean).join(' · ')}`);
+@@ -1271,6 +1628,8 @@
      /** 播放方式：MSE · ALAC（浏览器直接解码）、ALAC → FLAC（转码）、E-AC-3 → 5.1 PCM（解码为多声道 PCM） */
      modeText() {
        const c = this.current;
@@ -1083,7 +1095,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
        if (c.mode === 'flac') return 'ALAC → FLAC';
        if (c.mode === 'ec3') {
          const channels = this.pcm && this.pcm.channels;
-@@ -1294,7 +1652,13 @@
+@@ -1294,7 +1653,13 @@
          [t('player.bitrate'), formatRate(v.bandwidth)],
          [t('player.channels'), v.channels ? String(v.channels).split('/')[0] : ''],
        ].filter(([, value]) => value);
@@ -1098,7 +1110,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
        const list = el(doc, 'div', 'quality-panel-list');
        panel.replaceChildren(
          el(doc, 'div', 'quality-panel-head', qualityIcon(c.badge, doc), el(doc, 'span', 'quality-panel-label', c.label || codecName(c.codecs))),
-@@ -1408,9 +1772,21 @@
+@@ -1408,9 +1773,21 @@
        button.title = label;
      }
  
@@ -1121,7 +1133,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
        this.renderToggle();
        this.renderProgress();
        this.renderMode();
-@@ -2161,6 +2537,33 @@
+@@ -2161,6 +2538,33 @@
  
      async tryMode(mode, item, resumeAt, token) {
        this.teardown();
@@ -1155,7 +1167,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
        if (mode === 'ec3') {
          this.pcm = new PcmEngine(() => this.updatePcm(), (err) => this.showError(err.message || String(err)), () => this.ended());
          this.pcm.gain.gain.value = this.audio.volume;
-@@ -2211,7 +2614,7 @@
+@@ -2211,7 +2615,7 @@
  
      renderToggle() {
        const a = this.transport();
@@ -1164,7 +1176,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
        if (!a.paused) this.loading = false;
        const btn = this.$('.player-toggle');
        btn.innerHTML = waiting ? ICON_LOADING : (a.paused ? ICON_PLAY : ICON_PAUSE);
-@@ -2228,7 +2631,7 @@
+@@ -2228,7 +2632,7 @@
        this.$('.seek-fill').style.width = `${ratio * 100}%`;
        this.$('.seek-thumb').style.left = `${ratio * 100}%`;
        let bufEnd = 0;
@@ -1173,7 +1185,7 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
          bufEnd = this.pcm.loadedUntil;
        } else {
          const b = this.audio.buffered;
-@@ -2343,7 +2746,7 @@
+@@ -2343,7 +2747,7 @@
      }
    }
  
@@ -1183,8 +1195,8 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/player.js b/src/ui/player.js
    else global.AmHook = api;
  })(typeof window !== 'undefined' ? window : globalThis);
 diff -ruN '--exclude=.DS_Store' a/src/ui/prefs.mjs b/src/ui/prefs.mjs
---- a/src/ui/prefs.mjs	2026-10-24 18:05:05.620459200 +0800
-+++ b/src/ui/prefs.mjs	2026-10-24 18:05:05.702615200 +0800
+--- a/src/ui/prefs.mjs	2026-10-24 18:21:44.392354400 +0800
++++ b/src/ui/prefs.mjs	2026-10-24 18:21:44.472271500 +0800
 @@ -87,6 +87,13 @@
  }
  
@@ -1238,8 +1250,8 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/prefs.mjs b/src/ui/prefs.mjs
  addEventListener('storage', (event) => {
    if (event.key !== STORAGE_KEY) return;
 diff -ruN '--exclude=.DS_Store' a/src/ui/views/home.html b/src/ui/views/home.html
---- a/src/ui/views/home.html	2026-10-24 18:05:05.629708700 +0800
-+++ b/src/ui/views/home.html	2026-10-24 18:05:05.709615200 +0800
+--- a/src/ui/views/home.html	2026-10-24 18:21:44.399862800 +0800
++++ b/src/ui/views/home.html	2026-10-24 18:21:44.478779700 +0800
 @@ -64,10 +64,16 @@
      <div class="footer-row">
        <span data-i18n="footer.tagline"></span>
@@ -1262,8 +1274,8 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/views/home.html b/src/ui/views/home.htm
      <p class="footer-credits">
        <span data-i18n="footer.thanks"></span>
 diff -ruN '--exclude=.DS_Store' a/src/ui/views/settings.html b/src/ui/views/settings.html
---- a/src/ui/views/settings.html	2026-10-24 18:05:05.633822300 +0800
-+++ b/src/ui/views/settings.html	2026-10-24 18:05:05.713759600 +0800
+--- a/src/ui/views/settings.html	2026-10-24 18:21:44.403862600 +0800
++++ b/src/ui/views/settings.html	2026-10-24 18:21:44.482779600 +0800
 @@ -35,6 +35,8 @@
        </div>
      </section>
@@ -1274,8 +1286,8 @@ diff -ruN '--exclude=.DS_Store' a/src/ui/views/settings.html b/src/ui/views/sett
    </main>
  </div>
 diff -ruN '--exclude=.DS_Store' a/src/ui/views/settings.mjs b/src/ui/views/settings.mjs
---- a/src/ui/views/settings.mjs	2026-10-24 18:05:05.633822300 +0800
-+++ b/src/ui/views/settings.mjs	2026-10-24 18:05:05.713759600 +0800
+--- a/src/ui/views/settings.mjs	2026-10-24 18:21:44.403862600 +0800
++++ b/src/ui/views/settings.mjs	2026-10-24 18:21:44.483779500 +0800
 @@ -4,6 +4,7 @@
  import { formatPath, fitFolder, fitFile, templateIssues, TEMPLATE_VAR_GROUPS, TEMPLATE_SCOPES } from '../naming.mjs';
  import { downloads } from '../downloads.mjs';
